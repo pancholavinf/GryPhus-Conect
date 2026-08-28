@@ -1,0 +1,2 @@
+-- MIGRACION 005
+ALTER TABLE public.perfiles_usuario ADD COLUMN IF NOT EXISTS rut_dni VARCHAR(50);

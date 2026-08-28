@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccuraOp - Inspector e Intercambiador de Roles de Color</title>
+  <!-- Google Fonts: Montserrat & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* Dynamic Theme Variables (Updated via JavaScript) */
+      --p-primary: #59789F;
+      --p-accent: #7A9445;
+      --p-accent2: #ECE69D;
+      --p-dark: #243C2C;
+      --p-light: #A9B6C4;
+      
+      --bg-main: #F4F6F8;
+      --card-bg: #FFFFFF;
+      --text-dark: #132118;
+      --text-muted: #4A5A4E;
+      --sidebar-bg: #243C2C;
+      --sidebar-text: #ECE69D;
+      --sidebar-active: #7A9445;
+      --header-bg: #FFFFFF;
+      --primary-btn: #59789F;
+      --secondary-btn: #7A9445;
+      --badge-success: #7A9445;
+      --badge-warning: #ECE69D;
+      --badge-danger: #9B3E3E;
+      --border-color: #A9B6C4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header Control Bar */
+    header.control-bar {
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .header-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #FFFFFF;
+    }
+
+    .brand-title span {
+      background: linear-gradient(135deg, #38BDF8, #818CF8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .palette-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-palette {
+      background: #334155;
+      color: #94A3B8;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-palette:hover {
+      background: #475569;
+      color: #FFFFFF;
+      transform: translateY(-1px);
+    }
+
+    .btn-palette.active {
+      background: #0284C7;
+      color: #FFFFFF;
+      border-color: #38BDF8;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+    }
+
+    .btn-palette .swatch-dots {
+      display: flex;
+      gap: 3px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Inspector & Info Bar */
+    .inspector-bar {
+      background: #1E293B;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 20px 24px;
+    }
+
+    .inspector-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .palette-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .palette-info h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #F8FAFC;
+    }
+
+    .palette-info p {
+      font-size: 0.85rem;
+      color: #94A3B8;
+      margin-top: 2px;
+    }
+
+    .inspector-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn-action-sm {
+      background: #334155;
+      color: #E2E8F0;
+      border: 1px solid #475569;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-action-sm:hover {
+      background: #475569;
+      color: #FFFFFF;
+      border-color: #38BDF8;
+    }
+
+    .swatches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 16px;
+    }
+
+    .swatch-card {
+      background: #0F172A;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .swatch-card:hover {
+      border-color: #38BDF8;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    }
+
+    .swatch-top-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .color-picker-wrapper {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      border: 2px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .color-picker-input {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 65px;
+      height: 65px;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .swatch-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .role-select {
+      background: #1E293B;
+      border: 1px solid #38BDF8;
+      color: #38BDF8;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 6px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .hex-input-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .hex-text-input {
+      background: #1E293B;
+      border: 1px solid #475569;
+      color: #F8FAFC;
+      font-family: monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      width: 90px;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .hex-text-input:focus {
+      border-color: #38BDF8;
+    }
+
+    .shift-buttons {
+      display: flex;
+      gap: 4px;
+    }
+
+    .btn-shift {
+      background: #334155;
+      color: #94A3B8;
+      border: 1px solid #475569;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-shift:hover {
+      background: #0284C7;
+      color: #FFFFFF;
+      border-color: #38BDF8;
+    }
+
+    /* Main Container & App Workspace */
+    main.workspace {
+      flex: 1;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* App Frame Sections */
+    .app-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .app-section-header h3 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #CBD5E1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-app-tag {
+      background: #334155;
+      color: #38BDF8;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* ========================================================= */
+    /* MOCKUP STYLING: DESKTOP APP (accuraop_gerencia) */
+    /* ========================================================= */
+    .desktop-window {
+      background-color: var(--bg-main);
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 680px;
+      transition: background-color 0.3s ease;
+    }
+
+    /* Sidebar */
+    .desktop-sidebar {
+      background-color: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background-color: var(--sidebar-active);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #FFFFFF;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .logo-text {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: -0.5px;
+    }
+
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .menu-item {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.85;
+    }
+
+    .menu-item:hover {
+      opacity: 1;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .menu-item.active {
+      opacity: 1;
+      background-color: var(--sidebar-active);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--p-primary);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .user-role {
+      font-size: 0.7rem;
+      opacity: 0.7;
+    }
+
+    /* Desktop Main Content Area */
+    .desktop-main {
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-main);
+      overflow-y: auto;
+    }
+
+    .desktop-header {
+      background-color: var(--header-bg);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+      transition: background-color 0.3s ease;
+    }
+
+    .header-title h4 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .header-title p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-desktop-primary {
+      background-color: var(--primary-btn);
+      color: #FFFFFF;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-desktop-secondary {
+      background-color: transparent;
+      color: var(--text-dark);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Desktop View Content */
+    .desktop-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background-color: var(--card-bg);
+      border-radius: 10px;
+      padding: 16px 20px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kpi-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background-color: var(--p-accent2);
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+    }
+
+    .kpi-value {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .kpi-footer {
+      font-size: 0.7rem;
+      color: var(--badge-success);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Obra Cards Grid */
+    .obras-section-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+
+    .obras-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .obra-card {
+      background-color: var(--card-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      border-left: 6px solid var(--p-accent);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .obra-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .obra-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .obra-name {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .obra-status-badge {
+      background-color: var(--badge-success);
+      color: #FFFFFF;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+
+    .obra-progress-bar {
+      height: 6px;
+      background-color: var(--bg-main);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .obra-progress-fill {
+      height: 100%;
+      background-color: var(--p-primary);
+      border-radius: 3px;
+    }
+
+    .obra-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* EDP Auditoria Table Mockup */
+    .edp-auditoria-panel {
+      background-color: var(--card-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    table.data-table th {
+      background-color: var(--bg-main);
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    table.data-table td {
+      padding: 12px 14px;
+      color: var(--text-dark);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    table.data-table tr:hover {
+      background-color: rgba(0,0,0,0.015);
+    }
+
+    .badge-revision-approved {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--badge-success);
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+    }
+
+    .badge-revision-pending {
+      background-color: rgba(245, 158, 11, 0.15);
+      color: var(--badge-warning);
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+    }
+
+    /* ========================================================= */
+    /* MOCKUP STYLING: MOBILE APP (accuraop_terreno) */
+    /* ========================================================= */
+    .mobile-mockup-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;
+      justify-content: center;
+    }
+
+    .mobile-device {
+      width: 340px;
+      height: 680px;
+      background-color: var(--p-dark);
+      border-radius: 36px;
+      padding: 12px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+      border: 4px solid #334155;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .mobile-screen {
+      background-color: var(--bg-main);
+      border-radius: 26px;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .mobile-status-bar {
+      height: 24px;
+      background-color: var(--p-dark);
+      color: #FFFFFF;
+      padding: 0 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+
+    .mobile-notch {
+      width: 100px;
+      height: 12px;
+      background-color: #000000;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      margin: 0 auto;
+    }
+
+    .mobile-app-bar {
+      background-color: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .mobile-app-bar h5 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .offline-badge {
+      background-color: var(--p-accent);
+      color: #FFFFFF;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .mobile-body {
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mobile-card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mobile-card-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      color: var(--text-dark);
+      outline: none;
+    }
+
+    .photo-picker-box {
+      border: 2px dashed var(--p-primary);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      background-color: rgba(0,0,0,0.01);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-mobile-primary {
+      background-color: var(--secondary-btn);
+      color: #FFFFFF;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin-top: auto;
+    }
+
+    .maestro-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .maestro-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .maestro-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .maestro-role {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .asistencia-toggle {
+      display: flex;
+      gap: 4px;
+    }
+
+    .toggle-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-main);
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .toggle-btn.active-presente {
+      background-color: var(--badge-success);
+      color: #FFFFFF;
+      border-color: var(--badge-success);
+    }
+
+    .toggle-btn.active-medio {
+      background-color: var(--badge-warning);
+      color: #FFFFFF;
+      border-color: var(--badge-warning);
+    }
+
+    /* Footer */
+    footer.app-footer {
+      background: #0F172A;
+      border-top: 1px solid #1E293B;
+      padding: 24px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #64748B;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Control Bar -->
+  <header class="control-bar">
+    <div class="header-container">
+      <div class="brand-title">
+        <span>AccuraOp</span> Selector & Intercambiador de Roles de Color
+      </div>
+
+      <!-- Palette Buttons -->
+      <div class="palette-buttons" id="paletteButtonsContainer">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Color Inspector Panel with Role Selectors & Shifting Controls -->
+  <section class="inspector-bar">
+    <div class="inspector-container">
+      <div class="palette-info-row">
+        <div class="palette-info">
+          <h2 id="currentPaletteTitle">1. Bosque & Acero</h2>
+          <p id="currentPaletteDesc">Cambia los roles de los 5 colores mediante el selector de posición o desplázalos con las flechas.</p>
+        </div>
+
+        <div class="inspector-actions">
+          <button class="btn-action-sm" onclick="rotatePaletteColors()">
+            <span>🔀</span> Rotar Colores (Shift)
+          </button>
+          <button class="btn-action-sm" onclick="invertSidebarAndBackground()">
+            <span>🌗</span> Invertir Fondo / Lateral
+          </button>
+          <button class="btn-action-sm" onclick="resetActivePalette()">
+            <span>🔄</span> Restablecer Original
+          </button>
+          <button class="btn-action-sm" onclick="copyCurrentPaletteHex()" style="border-color: #38BDF8; color: #38BDF8;">
+            <span>📋</span> Copiar Paleta (HEX)
+          </button>
+        </div>
+      </div>
+
+      <div class="swatches-grid" id="swatchesContainer">
+        <!-- Swatches injected via JavaScript -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Workspace -->
+  <main class="workspace" id="mainWorkspace">
+
+    <!-- DESKTOP APP SECTION -->
+    <section>
+      <div class="app-section-header">
+        <h3>
+          <span class="badge-app-tag">Escritorio</span>
+          accuraop_gerencia — Dashboard y Auditoría EDP
+        </h3>
+      </div>
+
+      <!-- Desktop Window Mockup -->
+      <div class="desktop-window">
+        <!-- Sidebar -->
+        <aside class="desktop-sidebar">
+          <div>
+            <div class="sidebar-logo">
+              <div class="logo-icon">A</div>
+              <div class="logo-text">AccuraOp</div>
+            </div>
+
+            <ul class="sidebar-menu">
+              <li class="menu-item active">
+                <span>📊</span> Dashboard
+              </li>
+              <li class="menu-item">
+                <span>📥</span> Ingesta Presupuesto
+              </li>
+              <li class="menu-item">
+                <span>🔍</span> Auditoría & EDPs
+              </li>
+              <li class="menu-item">
+                <span>👥</span> Control Personal
+              </li>
+              <li class="menu-item">
+                <span>🎨</span> Materiales
+              </li>
+            </ul>
+          </div>
+
+          <div class="sidebar-user">
+            <div class="user-avatar">AG</div>
+            <div class="user-info">
+              <span class="user-name">Admin Accuratek</span>
+              <span class="user-role">Gerencia Operaciones</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <div class="desktop-main">
+          <!-- Desktop Header -->
+          <div class="desktop-header">
+            <div class="header-title">
+              <h4>Control de Obras y Estados de Pago</h4>
+              <p>Resumen gerencial en tiempo real • Agosto 2026</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn-desktop-secondary">🔄 Resincronizar</button>
+              <button class="btn-desktop-primary">🔒 Emitir Nuevo EDP</button>
+            </div>
+          </div>
+
+          <!-- Desktop Body Content -->
+          <div class="desktop-body">
+            <!-- KPI Cards -->
+            <div class="kpi-grid">
+              <div class="kpi-card">
+                <div class="kpi-header">
+                  <span class="kpi-label">Presupuesto Total</span>
+                  <div class="kpi-icon">$</div>
+                </div>
+                <div class="kpi-value">$248.500.000</div>
+                <div class="kpi-footer">↑ 12.4% vs mes anterior</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-header">
+                  <span class="kpi-label">Monto Ejecutado Aprobado</span>
+                  <div class="kpi-icon">✓</div>
+                </div>
+                <div class="kpi-value">$142.300.000</div>
+                <div class="kpi-footer">57.2% del total contratado</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-header">
+                  <span class="kpi-label">Avances por Cobrar</span>
+                  <div class="kpi-icon">⏳</div>
+                </div>
+                <div class="kpi-value">$38.900.000</div>
+                <div class="kpi-footer" style="color: var(--badge-warning);">4 avances listos para EDP</div>
+              </div>
+            </div>
+
+            <!-- Obras Grid Section -->
+            <div>
+              <div class="obras-section-title">Obras Activas en Ejecución</div>
+              <div class="obras-grid">
+                <!-- Obra Card 1 -->
+                <div class="obra-card">
+                  <div class="obra-card-head">
+                    <span class="obra-name">Edificio Costanera Tower</span>
+                    <span class="obra-status-badge">Activa</span>
+                  </div>
+                  <div class="obra-progress-bar">
+                    <div class="obra-progress-fill" style="width: 78%;"></div>
+                  </div>
+                  <div class="obra-meta-row">
+                    <span>Avance: <b>78% (4.120 m²)</b></span>
+                    <span>EDP #3 emitido</span>
+                  </div>
+                </div>
+
+                <!-- Obra Card 2 -->
+                <div class="obra-card" style="border-left-color: var(--p-primary);">
+                  <div class="obra-card-head">
+                    <span class="obra-name">Planta Industrial Lo Espejo</span>
+                    <span class="obra-status-badge">Activa</span>
+                  </div>
+                  <div class="obra-progress-bar">
+                    <div class="obra-progress-fill" style="width: 45%;"></div>
+                  </div>
+                  <div class="obra-meta-row">
+                    <span>Avance: <b>45% (2.850 m²)</b></span>
+                    <span>EDP #1 pendiente</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- EDP & Data Table Section -->
+            <div class="edp-auditoria-panel">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="font-family: 'Montserrat', sans-serif; font-size: 0.95rem; font-weight: 700; color: var(--text-dark);">
+                  Auditoría de Avances para Próximo Estado de Pago
+                </h4>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Total 4 partidas validadas</span>
+              </div>
+
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Código Plano</th>
+                      <th>Ubicación / Sector</th>
+                      <th>Estructura & Perfil</th>
+                      <th>Cantidad (m²)</th>
+                      <th>Precio Unit.</th>
+                      <th>Subtotal Pesos</th>
+                      <th>Estado Revisión</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><b>PL-INT-04</b></td>
+                      <td>Piso 4 - Sector Norte</td>
+                      <td>Viga H 300x150 mm</td>
+                      <td>350 m²</td>
+                      <td>$12.500 /m²</td>
+                      <td><b>$4.375.000</b></td>
+                      <td><span class="badge-revision-approved">✓ Aprobado</span></td>
+                    </tr>
+                    <tr>
+                      <td><b>PL-IGN-02</b></td>
+                      <td>Piso 2 - Pilares Centrales</td>
+                      <td>Pilar Cajón F-120</td>
+                      <td>520 m²</td>
+                      <td>$15.000 /m²</td>
+                      <td><b>$7.800.000</b></td>
+                      <td><span class="badge-revision-approved">✓ Aprobado</span></td>
+                    </tr>
+                    <tr>
+                      <td><b>PL-MOR-08</b></td>
+                      <td>Subterráneo 1 - Pasadas</td>
+                      <td>Mortero Ignífugo</td>
+                      <td>180 m²</td>
+                      <td>$9.800 /m²</td>
+                      <td><b>$1.764.000</b></td>
+                      <td><span class="badge-revision-pending">⏳ En Auditoría</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MOBILE APP SECTION -->
+    <section>
+      <div class="app-section-header">
+        <h3>
+          <span class="badge-app-tag">Móvil</span>
+          accuraop_terreno — Registro de Terreno y Asistencia Cuadrilla
+        </h3>
+      </div>
+
+      <div class="mobile-mockup-wrapper">
+        <!-- Device 1: Registro de Avance -->
+        <div class="mobile-device">
+          <div class="mobile-screen">
+            <div class="mobile-status-bar">
+              <span>9:41</span>
+              <div class="mobile-notch"></div>
+              <span>📶 100%</span>
+            </div>
+
+            <div class="mobile-app-bar">
+              <div>
+                <h5>AccuraOp Terreno</h5>
+                <span style="font-size: 0.65rem; opacity: 0.8;">Edificio Costanera</span>
+              </div>
+              <span class="offline-badge">⚡ SQLite Synced</span>
+            </div>
+
+            <div class="mobile-body">
+              <div class="mobile-card">
+                <div class="mobile-card-title">1. Seleccionar Partida de Obra</div>
+                <div class="form-group">
+                  <span class="form-label">Sector / Ubicación</span>
+                  <input type="text" class="form-input" value="Piso 4 - Sector Norte (PL-INT-04)" readonly>
+                </div>
+                <div class="form-group">
+                  <span class="form-label">Perfil & Estructura</span>
+                  <input type="text" class="form-input" value="Viga H 300x150 mm • F-60 Intumescente" readonly>
+                </div>
+              </div>
+
+              <div class="mobile-card">
+                <div class="mobile-card-title">2. Avance Ejecutado en Jornada</div>
+                <div class="form-group">
+                  <span class="form-label">Cantidad Completada (m²)</span>
+                  <input type="text" class="form-input" value="120 m² terminados" style="font-weight: 800; font-size: 1rem; color: var(--p-primary);">
+                </div>
+
+                <div class="form-group">
+                  <span class="form-label">Evidencia Fotográfica Obligatoria</span>
+                  <div class="photo-picker-box">
+                    <span style="font-size: 1.5rem;">📷</span>
+                    <span>Capturar foto de evidencia</span>
+                    <span style="font-size: 0.65rem; opacity: 0.7;">Micro-sellos de tiempo aplicados</span>
+                  </div>
+                </div>
+              </div>
+
+              <button class="btn-mobile-primary">Guardar Registro en Terreno</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Device 2: Asistencia de Maestros -->
+        <div class="mobile-device">
+          <div class="mobile-screen">
+            <div class="mobile-status-bar">
+              <span>9:42</span>
+              <div class="mobile-notch"></div>
+              <span>📶 100%</span>
+            </div>
+
+            <div class="mobile-app-bar">
+              <div>
+                <h5>Control de Asistencia</h5>
+                <span style="font-size: 0.65rem; opacity: 0.8;">Cuadrilla Pintura Intumescente</span>
+              </div>
+              <span class="offline-badge">11 de Agosto 2026</span>
+            </div>
+
+            <div class="mobile-body">
+              <div class="mobile-card">
+                <div class="mobile-card-title">Asistencia de Trabajadores</div>
+
+                <!-- Maestro 1 -->
+                <div class="maestro-row">
+                  <div class="maestro-info">
+                    <span class="maestro-name">Juan Carlos Pérez</span>
+                    <span class="maestro-role">Aplicador Intumescente</span>
+                  </div>
+                  <div class="asistencia-toggle">
+                    <div class="toggle-btn active-presente">1.0</div>
+                    <div class="toggle-btn">0.5</div>
+                    <div class="toggle-btn">0.0</div>
+                  </div>
+                </div>
+
+                <!-- Maestro 2 -->
+                <div class="maestro-row">
+                  <div class="maestro-info">
+                    <span class="maestro-name">Rodrigo Morales</span>
+                    <span class="maestro-role">Pintor Especialista</span>
+                  </div>
+                  <div class="asistencia-toggle">
+                    <div class="toggle-btn">1.0</div>
+                    <div class="toggle-btn active-medio">0.5</div>
+                    <div class="toggle-btn">0.0</div>
+                  </div>
+                </div>
+
+                <!-- Maestro 3 -->
+                <div class="maestro-row">
+                  <div class="maestro-info">
+                    <span class="maestro-name">Esteban Silva</span>
+                    <span class="maestro-role">Ayudante de Faena</span>
+                  </div>
+                  <div class="asistencia-toggle">
+                    <div class="toggle-btn active-presente">1.0</div>
+                    <div class="toggle-btn">0.5</div>
+                    <div class="toggle-btn">0.0</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-card" style="background-color: var(--sidebar-bg); color: var(--sidebar-text);">
+                <div style="font-size: 0.75rem; font-weight: 700;">Resumen Diario Cuadrilla:</div>
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--sidebar-active);">2.5 Jornadas ($72.500)</div>
+              </div>
+
+              <button class="btn-mobile-primary" style="background-color: var(--p-primary);">Enviar Asistencia Diaria</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    AccuraOp Inspector de Roles de Color — Accuratek Dev Team & Antigravity Assistant © 2026
+  </footer>
+
+  <script>
+    const ROLE_LABELS = [
+      "🎯 Branding / Botones Primarios",
+      "⚡ Acentos / Destacados / Éxito",
+      "⭐ Destacados KPI / Alertas",
+      "🏛️ Barra Lateral / Dark Surface",
+      "🖼️ Fondos & Rejillas / Bordes"
+    ];
+
+    const ROLE_KEYS = ["primary", "accent", "accent2", "dark", "light"];
+
+    const MASTER_PALETTES = [
+      {
+        id: 0,
+        name: "0. Trabs Oficial (Ámbar & Antracita)",
+        desc: "Paleta oficial Trabs: solidez estructural con contraste ámbar dorado, antracita y acero.",
+        colorList: ["#F3A500", "#4A5156", "#808A92", "#2D3033", "#F4F6F8"]
+      },
+      {
+        id: 1,
+        name: "1. Bosque & Acero",
+        desc: "Equilibrio orgánico e industrial con tonos verde bosque y azul acero.",
+        colorList: ["#59789F", "#7A9445", "#ECE69D", "#243C2C", "#A9B6C4"]
+      },
+      {
+        id: 2,
+        name: "2. Noche Industrial",
+        desc: "Perfil nocturno de alto contraste con tonos carbón, azul cielo y salvia.",
+        colorList: ["#80AADA", "#41603D", "#B3CCED", "#121A21", "#9C8E8A"]
+      },
+      {
+        id: 3,
+        name: "3. Tierra & Ámbar",
+        desc: "Elegancia ejecutiva cálida con ámbar dorado, bronce profundo y gris frío.",
+        colorList: ["#DDAA5D", "#533D1D", "#919496", "#323420", "#DFEBED"]
+      },
+      {
+        id: 4,
+        name: "4. Océano Petrolero",
+        desc: "Estética limpia y corporativa en tonos azul petróleo, turquesa y arena.",
+        colorList: ["#44A6B5", "#004554", "#B2D5E2", "#002B35", "#D3D0C8"]
+      },
+      {
+        id: 5,
+        name: "5. Ámbar & Eucalipto",
+        desc: "Contraste moderno de alta energía con oro solar, bronce y verde ciprés.",
+        colorList: ["#F3A500", "#567767", "#965603", "#456B6D", "#CAE5F8"]
+      }
+    ];
+
+    let activePalettes = JSON.parse(JSON.stringify(MASTER_PALETTES));
+    let activePaletteId = 1;
+
+    function renderPaletteButtons() {
+      const container = document.getElementById("paletteButtonsContainer");
+      container.innerHTML = "";
+
+      activePalettes.forEach(p => {
+        const btn = document.createElement("button");
+        btn.className = `btn-palette ${p.id === activePaletteId ? "active" : ""}`;
+        btn.onclick = () => selectPalette(p.id);
+
+        const dotsHtml = `
+          <div class="swatch-dots">
+            <div class="dot" style="background-color: ${p.colorList[0]}"></div>
+            <div class="dot" style="background-color: ${p.colorList[1]}"></div>
+            <div class="dot" style="background-color: ${p.colorList[3]}"></div>
+          </div>
+        `;
+
+        btn.innerHTML = `${dotsHtml} <span>${p.name.split(". ")[1]}</span>`;
+        container.appendChild(btn);
+      });
+    }
+
+    function selectPalette(id) {
+      activePaletteId = id;
+      const palette = activePalettes.find(p => p.id === id);
+      if (!palette) return;
+
+      applyPaletteColorsToCSS(palette.colorList);
+
+      // Update Inspector Info
+      document.getElementById("currentPaletteTitle").innerText = palette.name;
+      document.getElementById("currentPaletteDesc").innerText = palette.desc;
+
+      // Render Swatches
+      const swatchesContainer = document.getElementById("swatchesContainer");
+      swatchesContainer.innerHTML = "";
+
+      palette.colorList.forEach((hex, idx) => {
+        const card = document.createElement("div");
+        card.className = "swatch-card";
+
+        // Generate Role Options Dropdown
+        let optionsHtml = "";
+        ROLE_LABELS.forEach((label, rIdx) => {
+          optionsHtml += `<option value="${rIdx}" ${rIdx === idx ? "selected" : ""}>${label}</option>`;
+        });
+
+        card.innerHTML = `
+          <div class="swatch-top-row">
+            <div class="color-picker-wrapper" style="background-color: ${hex}">
+              <input type="color" class="color-picker-input" value="${formatHex(hex)}" oninput="onColorPickerChange(${idx}, this.value)">
+            </div>
+            <div class="swatch-details">
+              <select class="role-select" onchange="swapColorRole(${idx}, parseInt(this.value))">
+                ${optionsHtml}
+              </select>
+            </div>
+          </div>
+
+          <div class="hex-input-group">
+            <input type="text" class="hex-text-input" id="hexInput_${idx}" value="${hex.toUpperCase()}" onchange="onHexTextChange(${idx}, this.value)">
+            <div class="shift-buttons">
+              <button class="btn-shift" title="Mover color a la izquierda" onclick="shiftColorLeft(${idx})">◀</button>
+              <button class="btn-shift" title="Mover color a la derecha" onclick="shiftColorRight(${idx})">▶</button>
+            </div>
+          </div>
+        `;
+        swatchesContainer.appendChild(card);
+      });
+
+      renderPaletteButtons();
+    }
+
+    function applyPaletteColorsToCSS(colorList) {
+      const root = document.documentElement;
+
+      // colorList[0] = primary, [1] = accent, [2] = accent2, [3] = dark, [4] = light
+      root.style.setProperty("--p-primary", colorList[0]);
+      root.style.setProperty("--p-accent", colorList[1]);
+      root.style.setProperty("--p-accent2", colorList[2]);
+      root.style.setProperty("--p-dark", colorList[3]);
+      root.style.setProperty("--p-light", colorList[4]);
+
+      // Dynamic derivation
+      root.style.setProperty("--sidebar-bg", colorList[3]);
+      root.style.setProperty("--sidebar-text", colorList[2]);
+      root.style.setProperty("--sidebar-active", colorList[1]);
+      root.style.setProperty("--primary-btn", colorList[0]);
+      root.style.setProperty("--secondary-btn", colorList[1]);
+      root.style.setProperty("--badge-success", colorList[1]);
+      root.style.setProperty("--badge-warning", colorList[2]);
+      root.style.setProperty("--border-color", colorList[4]);
+    }
+
+    function swapColorRole(fromIdx, toIdx) {
+      if (fromIdx === toIdx) return;
+      const palette = activePalettes.find(p => p.id === activePaletteId);
+      if (!palette) return;
+
+      // Swap positions in colorList array
+      const temp = palette.colorList[fromIdx];
+      palette.colorList[fromIdx] = palette.colorList[toIdx];
+      palette.colorList[toIdx] = temp;
+
+      selectPalette(activePaletteId);
+    }
+
+    function shiftColorLeft(idx) {
+      if (idx <= 0) return;
+      swapColorRole(idx, idx - 1);
+    }
+
+    function shiftColorRight(idx) {
+      if (idx >= 4) return;
+      swapColorRole(idx, idx + 1);
+    }
+
+    function rotatePaletteColors() {
+      const palette = activePalettes.find(p => p.id === activePaletteId);
+      if (!palette) return;
+
+      // Shift array to the right
+      const last = palette.colorList.pop();
+      palette.colorList.unshift(last);
+
+      selectPalette(activePaletteId);
+    }
+
+    function invertSidebarAndBackground() {
+      const palette = activePalettes.find(p => p.id === activePaletteId);
+      if (!palette) return;
+
+      // Swap Index 3 (Dark Surface/Sidebar) with Index 4 (Light Surface/Background)
+      const temp = palette.colorList[3];
+      palette.colorList[3] = palette.colorList[4];
+      palette.colorList[4] = temp;
+
+      selectPalette(activePaletteId);
+    }
+
+    function onColorPickerChange(idx, newHex) {
+      const palette = activePalettes.find(p => p.id === activePaletteId);
+      if (!palette) return;
+
+      palette.colorList[idx] = newHex.toUpperCase();
+      
+      const textInput = document.getElementById(`hexInput_${idx}`);
+      if (textInput) textInput.value = newHex.toUpperCase();
+
+      applyPaletteColorsToCSS(palette.colorList);
+      renderPaletteButtons();
+    }
+
+    function onHexTextChange(idx, value) {
+      let formatted = value.trim();
+      if (!formatted.startsWith('#')) formatted = '#' + formatted;
+
+      if (!/^#[0-9A-F]{6}$/i.test(formatted)) {
+        alert("Por favor ingresa un código HEX válido de 6 caracteres (ej: #59789F)");
+        return;
+      }
+
+      onColorPickerChange(idx, formatted);
+    }
+
+    function formatHex(hex) {
+      if (!hex.startsWith('#')) return '#' + hex;
+      return hex;
+    }
+
+    function resetActivePalette() {
+      const original = MASTER_PALETTES.find(p => p.id === activePaletteId);
+      if (!original) return;
+
+      const active = activePalettes.find(p => p.id === activePaletteId);
+      active.colorList = JSON.parse(JSON.stringify(original.colorList));
+
+      selectPalette(activePaletteId);
+    }
+
+    function copyCurrentPaletteHex() {
+      const p = activePalettes.find(p => p.id === activePaletteId);
+      if (!p) return;
+
+      const text = `(${p.colorList.join(', ')})`;
+      navigator.clipboard.writeText(text);
+      alert(`¡Paleta de colores copiada al portapapeles!\n\n${p.name}: ${text}`);
+    }
+
+    // Initialize on load
+    window.addEventListener("DOMContentLoaded", () => {
+      selectPalette(0);
+    });
+  </script>
+</body>
+</html>

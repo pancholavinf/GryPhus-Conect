@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Trabs Terreno",
+    "slug": "trabs-terreno",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.trabs.terreno"
+    },
+    "android": {
+      "package": "com.trabs.terreno",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2D3033"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "backgroundColor": "#F4F6F8"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a88b63d6-4380-4931-b81b-1cbbfdedf108"
+      }
+    },
+    "plugins": [
+      "expo-font",
+      ["expo-sqlite", { "useSQLiteCAPI": true }]
+    ]
+  }
+}

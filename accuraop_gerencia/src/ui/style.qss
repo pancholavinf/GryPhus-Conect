@@ -1,0 +1,307 @@
+/* style.qss - Trabs Gerencia (Paleta Oficial Trabs 2026) */
+/* 
+   Paleta Oficial Trabs:
+   - #F3A500: Primario / Acento de Marca / CTA / Badges Destacados (Ámbar Solar)
+   - #2D3033: Superficie Oscura / Barra Lateral / Encabezados Dark (Antracita Oscuro)
+   - #808A92: Gris Neutro / Bordes / Rejillas / Subtítulos (Gris Acero)
+   - #414445: Superficie Secundaria / Separadores Dark (Carbón Pizarra)
+   - #4A5156: Acento Neutro / Iconografía Secundaria (Pizarra Medio)
+   - #F4F6F8: Fondo Principal de Aplicación (Gris Hielo Clean)
+   - #FFFFFF: Fondo de Tarjetas, Tablas y Modales
+   - #1F2115: Texto Principal de Alta Legibilidad
+*/
+
+/* 1. REGLA DE FONDO PRINCIPAL GLOBAL */
+QMainWindow,
+QWidget,
+QStackedWidget,
+QScrollArea,
+QScrollArea > QWidget,
+QAbstractScrollArea,
+QWidget#MainCentralWidget,
+QWidget#LoginScreen,
+QWidget#MainView {
+    background-color: #F4F6F8;
+    color: #1F2115;
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* Tipografía de etiquetas */
+QLabel {
+    color: #1F2115;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
+
+QLabel#TitleLabel {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #2D3033;
+}
+
+/* 2. BARRA LATERAL (SIDEBAR): Fondo Antracita Oscuro (#2D3033) */
+QFrame#Sidebar, 
+QFrame#Sidebar QWidget {
+    background-color: #2D3033;
+}
+
+QFrame#Sidebar {
+    border-right: 1px solid #414445;
+}
+
+QFrame#Sidebar QLabel {
+    color: #FFFFFF !important;
+    background-color: transparent;
+}
+
+QPushButton.SidebarButton {
+    background-color: transparent;
+    color: #EAECEE !important;
+    text-align: left;
+    padding: 12px 16px;
+    border: none;
+    border-left: 4px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+}
+
+QPushButton.SidebarButton:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #FFFFFF !important;
+}
+
+QPushButton.SidebarButton:checked {
+    background-color: #414445;
+    color: #FFFFFF !important;
+    border-left: 4px solid #F3A500;
+    font-weight: 700;
+}
+
+QPushButton.SidebarButtonSync {
+    color: #F3A500 !important;
+    border: 1px solid #F3A500;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background: transparent;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+QPushButton.SidebarButtonSync:hover {
+    background-color: rgba(243, 165, 0, 0.15);
+    color: #FFFFFF !important;
+}
+
+QPushButton.SidebarButtonUpdate {
+    color: #BEF264 !important;
+    border: 1px solid #65A30D;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background-color: rgba(85, 107, 47, 0.25);
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+QPushButton.SidebarButtonUpdate:hover {
+    background-color: #556B2F;
+    border-color: #84CC16;
+    color: #FFFFFF !important;
+}
+
+QPushButton.SidebarButtonLogout {
+    color: #FCA5A5 !important;
+    border: 1px solid #EF4444;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background: transparent;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+QPushButton.SidebarButtonLogout:hover {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #FFFFFF !important;
+}
+
+/* 3. TARJETAS Y CONTENEDORES BLANCOS (#FFFFFF) */
+QWidget#LoginContainer,
+QFrame.Card,
+QWidget.Card,
+QGroupBox {
+    background-color: #FFFFFF;
+    color: #1F2115;
+    border: 1px solid #808A92;
+    border-radius: 12px;
+}
+
+QLabel.CardTitle {
+    color: #2D3033;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: transparent;
+}
+
+QLabel.CardValue {
+    color: #1F2115;
+    font-size: 26px;
+    font-weight: 800;
+    font-family: 'Montserrat', sans-serif;
+    background-color: transparent;
+}
+
+/* 4. CAMPOS DE ENTRADA E INPUTS (#FFFFFF) */
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {
+    background-color: #FFFFFF;
+    border: 1px solid #808A92;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #1F2115;
+    font-size: 14px;
+    selection-background-color: #F3A500;
+    selection-color: #1F2115;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
+    border: 2px solid #F3A500;
+    background-color: #FFFFFF;
+    color: #1F2115;
+}
+
+/* 5. BOTONES PRIMARIOS (#F3A500) */
+QPushButton#PrimaryButton {
+    background-color: #F3A500;
+    color: #1F2115 !important;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: #D99300;
+    color: #1F2115 !important;
+}
+
+QPushButton#PrimaryButton:pressed {
+    background-color: #BF8100;
+    color: #1F2115 !important;
+}
+
+QPushButton#PrimaryButton:disabled {
+    background-color: #808A92;
+    color: #E2E8F0 !important;
+}
+
+/* BOTONES SECUNDARIOS */
+QPushButton#SecondaryButton {
+    background-color: #FFFFFF;
+    color: #2D3033;
+    border: 1px solid #808A92;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QPushButton#SecondaryButton:hover {
+    background-color: #F4F6F8;
+    color: #2D3033;
+}
+
+/* 6. TABLAS AMPLIAS Y ESPACIOSAS: Filas de 44px con amplio acolchado de celda */
+QTableWidget, QTableWidget viewport, QTableView, QHeaderView {
+    background-color: #FFFFFF;
+    color: #1F2115;
+}
+
+QTableWidget, QTableView {
+    border: 1px solid #808A92;
+    border-radius: 8px;
+    gridline-color: #F4F6F8;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    alternate-background-color: #F8FAFC;
+    selection-background-color: #2D3033;
+    selection-color: #FFFFFF;
+}
+
+QTableWidget::item, QTableView::item {
+    padding: 12px 14px;
+    min-height: 44px;
+    color: #1F2115;
+    border-bottom: 1px solid #F4F6F8;
+    background-color: #FFFFFF;
+}
+
+QTableWidget::item:selected, QTableView::item:selected {
+    background-color: #2D3033;
+    color: #FFFFFF;
+}
+
+QHeaderView::section {
+    background-color: #2D3033;
+    color: #FFFFFF;
+    padding: 14px 12px;
+    min-height: 40px;
+    border: none;
+    border-bottom: 2px solid #F3A500;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* 7. PESTANAS (TABS) */
+QTabWidget::pane {
+    border: 1px solid #808A92;
+    background-color: #FFFFFF;
+    color: #1F2115;
+    border-radius: 6px;
+}
+
+QTabBar::tab {
+    background-color: #EAECEE;
+    color: #4A5156;
+    padding: 10px 18px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: #FFFFFF;
+    color: #2D3033;
+    border: 1px solid #808A92;
+    border-bottom: 3px solid #F3A500;
+}
+
+/* 8. DIALOGOS Y MENUS */
+QDialog, QMessageBox {
+    background-color: #FFFFFF;
+    color: #1F2115;
+}
+
+QMessageBox QLabel, QDialog QLabel {
+    color: #1F2115;
+    font-size: 14px;
+    background-color: transparent;
+}
+
+QMessageBox QPushButton, QDialog QPushButton {
+    background-color: #F3A500;
+    color: #1F2115 !important;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 700;
+}
