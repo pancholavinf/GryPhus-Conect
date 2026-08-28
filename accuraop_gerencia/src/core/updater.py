@@ -25,8 +25,12 @@ class CheckUpdateWorker(QThread):
 
     def run(self):
         try:
-            headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
-            response = requests.get(self.manifest_url, headers=headers, timeout=5)
+            headers = {
+                "User-Agent": "TrabsGerencia-App/1.0",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Accept": "application/vnd.github.v3+json"
+            }
+            response = requests.get(self.manifest_url, headers=headers, timeout=6)
             
             if response.status_code != 200:
                 self.check_failed.emit(f"HTTP {response.status_code}: No se pudo obtener el manifiesto de versión.")

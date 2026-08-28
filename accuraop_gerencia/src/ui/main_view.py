@@ -106,13 +106,13 @@ class MainView(QWidget):
         # Espaciador para empujar botones hacia abajo
         sidebar_layout.addStretch()
         
-        self.btn_resync = QPushButton("Resincronizar Datos")
+        self.btn_resync = QPushButton("⚡ Resincronizar Datos")
         self.btn_resync.setProperty("class", "SidebarButtonSync")
         self.btn_resync.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_resync.clicked.connect(self.resincronizar_todo)
         sidebar_layout.addWidget(self.btn_resync)
 
-        self.btn_updates = QPushButton("Buscar Actualizaciones")
+        self.btn_updates = QPushButton("🔄 Buscar Actualizaciones")
         self.btn_updates.setProperty("class", "SidebarButtonUpdate")
         self.btn_updates.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_updates.clicked.connect(self.buscar_actualizaciones_manual)
@@ -124,9 +124,9 @@ class MainView(QWidget):
         self.btn_logout.clicked.connect(self.logout_requested.emit)
         sidebar_layout.addWidget(self.btn_logout)
 
-        version_lbl = QLabel(f"v{__version__}")
+        version_lbl = QLabel(f"Trabs Gerencia v{__version__}  🟢")
         version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        version_lbl.setStyleSheet("font-size: 11px; color: #808A92; padding-top: 6px;")
+        version_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 600; padding-top: 6px;")
         sidebar_layout.addWidget(version_lbl)
         
         # Área de contenido
