@@ -97,6 +97,12 @@ class MainView(QWidget):
         self.btn_asistencia.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_asistencia.clicked.connect(lambda: self.switch_view(4))
         
+        self.btn_dashboard.setToolTip("Panel principal de control y avance de obras")
+        self.btn_ingesta.setToolTip("Ingesta y procesamiento de reportes diarios de terreno")
+        self.btn_control_personal.setToolTip("Control de personal, dotación y subcontratistas")
+        self.btn_materiales.setToolTip("Gestión de stock, inventario y solicitudes de materiales")
+        self.btn_asistencia.setToolTip("Auditoría y reportes detallados de asistencia")
+        
         sidebar_layout.addWidget(self.btn_dashboard)
         sidebar_layout.addWidget(self.btn_ingesta)
         sidebar_layout.addWidget(self.btn_control_personal)
@@ -108,23 +114,26 @@ class MainView(QWidget):
         
         self.btn_resync = QPushButton("⚡ Resincronizar Datos")
         self.btn_resync.setProperty("class", "SidebarButtonSync")
+        self.btn_resync.setToolTip("Forzar actualización de todos los datos desde Supabase")
         self.btn_resync.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_resync.clicked.connect(self.resincronizar_todo)
         sidebar_layout.addWidget(self.btn_resync)
 
         self.btn_updates = QPushButton("🔄 Buscar Actualizaciones")
         self.btn_updates.setProperty("class", "SidebarButtonUpdate")
+        self.btn_updates.setToolTip("Comprobar si existe una nueva versión disponible en GitHub")
         self.btn_updates.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_updates.clicked.connect(self.buscar_actualizaciones_manual)
         sidebar_layout.addWidget(self.btn_updates)
 
         self.btn_logout = QPushButton("Cerrar Sesión")
         self.btn_logout.setProperty("class", "SidebarButtonLogout")
+        self.btn_logout.setToolTip("Cerrar sesión activa y salir de la cuenta")
         self.btn_logout.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_logout.clicked.connect(self.logout_requested.emit)
         sidebar_layout.addWidget(self.btn_logout)
 
-        version_lbl = QLabel(f"Trabs Gerencia v{__version__}  🟢")
+        version_lbl = QLabel(f"Trabs Gerencia v{__version__}  🟢 • Accuratek")
         version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_lbl.setStyleSheet("font-size: 11px; color: #94A3B8; font-weight: 600; padding-top: 6px;")
         sidebar_layout.addWidget(version_lbl)

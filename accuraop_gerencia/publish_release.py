@@ -5,8 +5,11 @@ import re
 import datetime
 import argparse
 import subprocess
+import requests
 from dotenv import load_dotenv
-from supabase import create_client
+
+GITHUB_OWNER = "pancholavinf"
+GITHUB_REPO = "trabs-gerencia"
 
 def update_version_py(version_file: str, new_version: str):
     """Actualiza la constante __version__ en src/version.py"""
@@ -39,7 +42,7 @@ def update_iss_script(iss_file: str, new_version: str):
     print(f"[OK] TrabsGerencia_Setup.iss actualizado con versión {new_version}")
 
 def compile_inno_setup(iss_file: str) -> bool:
-    """Intenta compilar el instalador con Inno Setup si ISCC.exe está en PATH o rutas comunes"""
+    """Compila el instalador con Inno Setup"""
     possible_iscc = [
         "iscc",
         r"C:\Program Files (x86)\Inno Setup 6\iscc.exe",
@@ -56,19 +59,83 @@ def compile_inno_setup(iss_file: str) -> bool:
             continue
 
     if iscc_bin:
-        print(f"Compilando instalador Inno Setup usando {iscc_bin}...")
+        print(f"Compilando instalador Inno Setup...")
         res = subprocess.run([iscc_bin, iss_file], cwd=os.path.dirname(iss_file))
         return res.returncode == 0
     else:
-        print("Aviso: ISCC.exe (Inno Setup) no detectado en PATH. Puedes compilar manualmente haciendo clic derecho en TrabsGerencia_Setup.iss -> Compile.")
+        print("Aviso: ISCC.exe no detectado en PATH.")
+        return False
+
+def upload_release_to_github(tag: str, release_title: str, release_notes: str, installer_path: str, token: str) -> bool:
+    """Crea un Release en GitHub y sube el archivo instalador .exe usando la API REST"""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "TrabsGerencia-Publisher/1.0"
+    }
+
+    # 1. Crear el Release en GitHub
+    release_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases"
+    payload = {
+        "tag_name": tag,
+        "name": release_title,
+        "body": release_notes,
+        "draft": False,
+        "prerelease": False
+    }
+    
+    print(f"Creando Release {tag} en GitHub ({GITHUB_OWNER}/{GITHUB_REPO})...")
+    resp = requests.post(release_url, headers=headers, json=payload)
+    
+    if resp.status_code == 422 and "already_exists" in resp.text:
+        print(f"Aviso: El release/tag {tag} ya existía. Obteniendo información...")
+        get_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/tags/{tag}"
+        resp = requests.get(get_url, headers=headers)
+
+    if resp.status_code not in (200, 201):
+        print(f"Error al crear Release en GitHub HTTP {resp.status_code}: {resp.text}")
+        return False
+
+    release_data = resp.json()
+    upload_url_template = release_data.get("upload_url", "")
+    if not upload_url_template:
+        print("Error: No se obtuvo URL de subida de assets desde GitHub.")
+        return False
+
+    # 2. Subir el archivo instalador .exe
+    clean_upload_url = upload_url_template.split("{")[0]
+    filename = os.path.basename(installer_path)
+    upload_url = f"{clean_upload_url}?name={filename}"
+
+    file_size = os.path.getsize(installer_path)
+    print(f"Subiendo {filename} ({file_size/(1024*1024):.1f} MB) a GitHub Releases...")
+    
+    upload_headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/octet-stream",
+        "Content-Length": str(file_size),
+        "User-Agent": "TrabsGerencia-Publisher/1.0"
+    }
+
+    with open(installer_path, "rb") as f:
+        up_resp = requests.post(upload_url, headers=upload_headers, data=f)
+
+    if up_resp.status_code in (200, 201):
+        asset_info = up_resp.json()
+        download_url = asset_info.get("browser_download_url", "")
+        print(f"[OK] ¡Instalador subido exitosamente a GitHub Releases!")
+        print(f"URL de descarga pública: {download_url}")
+        return True
+    else:
+        print(f"Error al subir asset a GitHub HTTP {up_resp.status_code}: {up_resp.text}")
         return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Automatiza la publicación y despliegue de una nueva versión de Trabs Gerencia.")
-    parser.add_argument("--version", "-v", type=str, help="Nuevo número de versión (ej: 1.0.1)")
+    parser = argparse.ArgumentParser(description="Automatiza la publicación completa de una nueva versión en GitHub Releases.")
+    parser.add_argument("--version", "-v", type=str, help="Nuevo número de versión (ej: 1.0.3)")
     parser.add_argument("--notes", "-n", type=str, help="Notas de la versión o changelog")
-    parser.add_argument("--mandatory", action="store_true", help="Marcar actualización como obligatoria")
     parser.add_argument("--skip-build", action="store_true", help="Omitir recompilación de PyInstaller")
+    parser.add_argument("--token", "-t", type=str, help="GitHub Personal Access Token")
     args = parser.parse_args()
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -82,7 +149,7 @@ def main():
 
     new_ver = args.version
     if not new_ver:
-        new_ver = input("Ingresa el nuevo número de versión (ej: 1.0.1): ").strip()
+        new_ver = input("Ingresa el nuevo número de versión (ej: 1.0.3): ").strip()
     
     if not re.match(r'^\d+\.\d+\.\d+$', new_ver):
         print(f"Error: La versión '{new_ver}' no cumple con el formato semántico X.Y.Z")
@@ -104,7 +171,7 @@ def main():
         release_notes = "\n".join(lines) if lines else "Mejoras de rendimiento y corrección de errores."
 
     print("\n====================================================")
-    print(f"  Publicando Trabs Gerencia v{new_ver}")
+    print(f"  Publicando Automáticamente Trabs Gerencia v{new_ver}")
     print("====================================================")
 
     # 1. Actualizar archivos de versión
@@ -115,7 +182,7 @@ def main():
 
     # 2. Recompilar PyInstaller
     if not args.skip_build:
-        print("\n--- Ejecutando compilación con PyInstaller ---")
+        print("\n--- 1/4. Ejecutando compilación con PyInstaller ---")
         build_script = os.path.join(base_dir, "build_exe.py")
         res = subprocess.run([sys.executable, build_script], cwd=base_dir)
         if res.returncode != 0:
@@ -123,120 +190,43 @@ def main():
             sys.exit(res.returncode)
 
     # 3. Compilar instalador Inno Setup
-    print("\n--- Generando instalador con Inno Setup ---")
+    print("\n--- 2/4. Generando instalador con Inno Setup ---")
     compile_inno_setup(iss_file)
 
-    # 4. Generar version.json
     installer_filename = f"TrabsGerencia_Setup_v{new_ver}.exe"
-    download_url = f"https://xkifhzhqgroemzudzxrf.supabase.co/storage/v1/object/public/app-updates/{installer_filename}"
-    
-    manifest = {
-        "version": new_ver,
-        "release_date": datetime.date.today().isoformat(),
-        "mandatory": bool(args.mandatory),
-        "min_supported_version": "1.0.0",
-        "release_notes": release_notes,
-        "download_url": download_url
-    }
+    installer_path = os.path.join(base_dir, "dist_installer", installer_filename)
 
-    manifest_path = os.path.join(base_dir, "version.json")
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2, ensure_ascii=False)
-    print(f"[OK] Manifiesto generado en {manifest_path}")
+    # 4. Commit y Push en Git
+    print("\n--- 3/4. Sincronizando código con Git ---")
+    try:
+        subprocess.run(["git", "add", "."], cwd=root_dir)
+        subprocess.run(["git", "commit", "-m", f"release: versión v{new_ver}"], cwd=root_dir)
+        subprocess.run(["git", "push", "origin", "main"], cwd=root_dir)
+        print("[OK] Cambios subidos a la rama principal en GitHub.")
+    except Exception as e_git:
+        print(f"Aviso en Git: {e_git}")
 
-    # 5. Subida a Supabase Storage
-    supabase_url = os.getenv("SUPABASE_URL", "https://xkifhzhqgroemzudzxrf.supabase.co")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    
-    if supabase_url and supabase_key:
-        try:
-            print("\nConectando a Supabase para subir versión...")
-            client = create_client(supabase_url, supabase_key)
-            
-            # Subir version.json
-            with open(manifest_path, "rb") as mf:
-                client.storage.from_("app-updates").upload(
-                    "version.json",
-                    mf.read(),
-                    file_options={"upsert": "true", "content-type": "application/json"}
-                )
-            print("[OK] version.json subido exitosamente a Supabase Storage (bucket: app-updates)")
+    # 5. Publicar en GitHub Releases
+    print("\n--- 4/4. Publicando Release en GitHub ---")
+    gh_token = args.token or os.getenv("GITHUB_TOKEN")
 
-            # Subir instalador si existe localmente
-            installer_path = os.path.join(base_dir, "dist_installer", installer_filename)
-            if os.path.exists(installer_path):
-                file_size_mb = os.path.getsize(installer_path) / (1024 * 1024)
-                print(f"Subiendo {installer_filename} ({file_size_mb:.1f} MB)...")
-                
-                try:
-                    # Intento directo estándar
-                    with open(installer_path, "rb") as inst_file:
-                        client.storage.from_("app-updates").upload(
-                            installer_filename,
-                            inst_file.read(),
-                            file_options={"upsert": "true", "content-type": "application/octet-stream"}
-                        )
-                    print(f"[OK] {installer_filename} subido exitosamente a Supabase Storage.")
-                except Exception as e_direct:
-                    print(f"Subida directa requirió protocolo TUS resumible ({e_direct}). Iniciando subida por bloques...")
-                    import base64
-                    import requests
-                    
-                    file_size = os.path.getsize(installer_path)
-                    b64_bucket = base64.b64encode(b"app-updates").decode()
-                    b64_object = base64.b64encode(installer_filename.encode()).decode()
-                    b64_type = base64.b64encode(b"application/octet-stream").decode()
+    if not gh_token:
+        print("\nPara publicar automáticamente el instalador en GitHub sin abrir el navegador:")
+        print("1. Crea un Token en: https://github.com/settings/tokens (Permiso: repo)")
+        print("2. Agrega en tu archivo .env la línea: GITHUB_TOKEN=ghp_tu_token_aqui")
+        gh_token = input("\nIngresa tu GitHub Personal Access Token (o presiona Enter para omitir): ").strip()
 
-                    headers = {
-                        "apikey": supabase_key,
-                        "Authorization": f"Bearer {supabase_key}",
-                        "Upload-Length": str(file_size),
-                        "Tus-Resumable": "1.0.0",
-                        "Upload-Metadata": f"bucketName {b64_bucket},objectName {b64_object},contentType {b64_type}",
-                        "x-upsert": "true"
-                    }
-
-                    tus_endpoint = f"{supabase_url}/storage/v1/upload/resumable"
-                    resp = requests.post(tus_endpoint, headers=headers)
-                    if resp.status_code not in (201, 200):
-                        raise Exception(f"TUS Init falló HTTP {resp.status_code}: {resp.text}")
-
-                    upload_url = resp.headers.get("Location")
-                    if not upload_url:
-                        raise Exception("TUS Init no retornó cabecera Location")
-
-                    if upload_url.startswith("/"):
-                        upload_url = f"{supabase_url}{upload_url}"
-
-                    chunk_size = 5 * 1024 * 1024
-                    offset = 0
-                    with open(installer_path, "rb") as f_in:
-                        while offset < file_size:
-                            chunk = f_in.read(chunk_size)
-                            patch_headers = {
-                                "apikey": supabase_key,
-                                "Authorization": f"Bearer {supabase_key}",
-                                "Upload-Offset": str(offset),
-                                "Content-Type": "application/offset+octet-stream",
-                                "Tus-Resumable": "1.0.0"
-                            }
-                            patch_resp = requests.patch(upload_url, data=chunk, headers=patch_headers)
-                            if patch_resp.status_code not in (204, 200):
-                                raise Exception(f"TUS Patch falló en offset {offset} HTTP {patch_resp.status_code}: {patch_resp.text}")
-                            offset += len(chunk)
-                            print(f"Progreso subida: {offset/(1024*1024):.1f} / {file_size/(1024*1024):.1f} MB ({(offset/file_size)*100:.1f}%)")
-
-                    print(f"[OK] {installer_filename} subido exitosamente vía protocolo TUS.")
-            else:
-                print(f"Nota: Si no se generó {installer_filename} automáticamente, compila TrabsGerencia_Setup.iss en Inno Setup y súbelo al bucket 'app-updates'.")
-
-        except Exception as e_sup:
-            print(f"Error al subir a Supabase: {e_sup}")
+    if gh_token and os.path.exists(installer_path):
+        tag_name = f"v{new_ver}"
+        release_title = f"Trabs Gerencia v{new_ver}"
+        upload_release_to_github(tag_name, release_title, release_notes, installer_path, gh_token)
     else:
-        print("Aviso: SUPABASE_KEY no encontrada en entorno para subida automática.")
+        print(f"\nPuedes subir manualmente el archivo generado a GitHub Releases:")
+        print(f"👉 {installer_path}")
+        print(f"Enlace: https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/new")
 
     print("\n====================================================")
-    print(f"  ¡PUBLICACIÓN DE VERSIÓN {new_ver} FINALIZADA!")
+    print(f"  ¡PROCESO DE VERSIÓN v{new_ver} COMPLETADO!")
     print("====================================================")
 
 if __name__ == "__main__":

@@ -40,6 +40,16 @@ QLabel#TitleLabel {
     color: #2D3033;
 }
 
+QToolTip {
+    background-color: #1F2115;
+    color: #FFFFFF;
+    border: 1px solid #414445;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+}
+
 /* 2. BARRA LATERAL (SIDEBAR): Fondo Antracita Oscuro (#2D3033) */
 QFrame#Sidebar, 
 QFrame#Sidebar QWidget {
