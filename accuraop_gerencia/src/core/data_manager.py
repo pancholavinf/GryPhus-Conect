@@ -122,7 +122,7 @@ class DataManager:
         res_obras = self._safe_execute(self.supabase.table("obras").select("id, nombre"))
         obras_dict = {o.get("id"): o.get("nombre") for o in (res_obras.data or [])}
 
-        res_jefes = self._safe_execute(self.supabase.table("perfiles_usuario").select("id, nombre").ilike("rol", "jefe_obra"))
+        res_jefes = self._safe_execute(self.supabase.table("perfiles_usuario").select("id, nombre"))
         jefes_dict = {j.get("id"): (j.get("nombre") or "Desconocido") for j in (res_jefes.data or [])}
 
         for rep in reportes:
@@ -277,9 +277,13 @@ class DataManager:
             return []
 
         res = self._safe_execute(
-            self.supabase.table("perfiles_usuario").select("*").ilike("rol", "jefe_obra")
+            self.supabase.table("perfiles_usuario").select("*").order("nombre")
         )
-        result = res.data or []
+        todos = res.data or []
+        result = [
+            p for p in todos 
+            if str(p.get("rol", "")).strip().lower() not in ("administrador", "admin", "gerente")
+        ]
         self._cache[cache_key] = {"timestamp": time.time(), "data": result}
         return result
 
@@ -351,7 +355,7 @@ class DataManager:
 
         # 2. Fetch jefes para mapping
         res_jefes = self._safe_execute(
-            self.supabase.table("perfiles_usuario").select("id, nombre").ilike("rol", "jefe_obra")
+            self.supabase.table("perfiles_usuario").select("id, nombre")
         )
         jefes_dict = {j.get("id"): (j.get("nombre") or "Desconocido") for j in (res_jefes.data or [])}
 

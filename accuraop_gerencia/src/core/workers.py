@@ -38,7 +38,8 @@ class LoginWorker(QThread):
                     if "rol" in user_meta:
                         rol = user_meta.get("rol")
                 
-                if rol and str(rol).lower() == "jefe_obra":
+                rol_clean = str(rol).strip().lower() if rol else ""
+                if rol_clean in ("jefe_obra", "jefe obra", "supervisor"):
                     self.supabase.auth.sign_out()
                     self.error.emit("Acceso denegado: Los Supervisores no pueden acceder a la aplicación de escritorio.")
                     return
@@ -113,7 +114,8 @@ class SessionCheckWorker(QThread):
                     if "rol" in user_meta:
                         rol = user_meta.get("rol")
                 
-                if rol and str(rol).lower() == "jefe_obra":
+                rol_clean = str(rol).strip().lower() if rol else ""
+                if rol_clean in ("jefe_obra", "jefe obra", "supervisor"):
                     self.supabase.auth.sign_out()
                     settings.remove("auth/refresh_token")
                     self.invalid.emit()
@@ -230,12 +232,12 @@ class CreateJefeWorker(QThread):
                  rut_dni: str = "", telefono: str = "", foto_perfil_url: str = ""):
         super().__init__()
         self.supabase = supabase
-        self.nombre = nombre
-        self.email = email
-        self.password = password
-        self.rut_dni = rut_dni
-        self.telefono = telefono
-        self.foto_perfil_url = foto_perfil_url
+        self.nombre = nombre.strip() if nombre else ""
+        self.email = email.strip().lower() if email else ""
+        self.password = password.strip() if password else ""
+        self.rut_dni = rut_dni.strip() if rut_dni else ""
+        self.telefono = telefono.strip() if telefono else ""
+        self.foto_perfil_url = foto_perfil_url.strip() if foto_perfil_url else ""
 
     def run(self):
         if not self.nombre or not self.email or not self.password:
@@ -243,35 +245,44 @@ class CreateJefeWorker(QThread):
             return
             
         try:
-            auth_res = self.supabase.auth.sign_up({
+            # Crear un cliente temporal aislado para registrar al nuevo supervisor
+            # sin sobreescribir ni afectar la sesión activa del administrador
+            from supabase import create_client
+            temp_client = create_client(str(self.supabase.supabase_url).rstrip("/"), str(self.supabase.supabase_key))
+
+            auth_res = temp_client.auth.sign_up({
                 "email": self.email,
                 "password": self.password,
                 "options": {
                     "data": {
                         "nombre": self.nombre,
                         "full_name": self.nombre,
-                        "rol": "Jefe_Obra",
+                        "rol": "jefe_obra",
                         "telefono": self.telefono,
-                        "foto_perfil_url": self.foto_perfil_url
+                        "foto_perfil_url": self.foto_perfil_url,
+                        "rut_dni": self.rut_dni or None
                     }
                 }
             })
             
-            if not auth_res.user:
-                self.error.emit("No se pudo registrar el usuario.")
+            if not auth_res or not auth_res.user:
+                self.error.emit("No se pudo registrar el usuario en el sistema de autenticación.")
                 return
                 
             nuevo_id = auth_res.user.id
             jefe_data = {
                 "id": nuevo_id,
                 "nombre": self.nombre,
-                "rol": "Jefe_Obra",
+                "email": self.email,
+                "rol": "jefe_obra",
                 "rut_dni": self.rut_dni or None,
-                "telefono": self.telefono,
-                "foto_perfil_url": self.foto_perfil_url
+                "telefono": self.telefono or None,
+                "foto_perfil_url": self.foto_perfil_url or None
             }
             
-            self.supabase.table("perfiles_usuario").upsert(jefe_data).execute()
+            dm = DataManager(self.supabase)
+            dm.execute_safe(self.supabase.table("perfiles_usuario").upsert(jefe_data))
+            dm.invalidate_cache("jefes_obra")
             self.success.emit(f"Supervisor '{self.nombre}' creado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al crear Supervisor: {str(e)}")
@@ -1032,10 +1043,10 @@ class UpdateJefeWorker(QThread):
         super().__init__()
         self.supabase = supabase
         self.jefe_id = jefe_id
-        self.nombre = nombre
-        self.rut_dni = rut_dni
-        self.telefono = telefono
-        self.foto_perfil_url = foto_perfil_url
+        self.nombre = nombre.strip() if nombre else ""
+        self.rut_dni = rut_dni.strip() if rut_dni else ""
+        self.telefono = telefono.strip() if telefono else ""
+        self.foto_perfil_url = foto_perfil_url.strip() if foto_perfil_url else ""
 
     def run(self):
         try:
@@ -1044,12 +1055,14 @@ class UpdateJefeWorker(QThread):
                 return
             data = {
                 "nombre": self.nombre,
-                "rut_dni": self.rut_dni,
-                "telefono": self.telefono,
-                "foto_perfil_url": self.foto_perfil_url
+                "rut_dni": self.rut_dni or None,
+                "telefono": self.telefono or None,
+                "foto_perfil_url": self.foto_perfil_url or None,
+                "rol": "jefe_obra"
             }
             dm = DataManager(self.supabase)
             dm.execute_safe(self.supabase.table("perfiles_usuario").update(data).eq("id", self.jefe_id))
+            dm.invalidate_cache("jefes_obra")
             self.success.emit(f"Supervisor '{self.nombre}' actualizado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al actualizar Supervisor: {str(e)}")
@@ -1070,7 +1083,9 @@ class DeleteJefeWorker(QThread):
                 self.error.emit("ID no válido para eliminar.")
                 return
             dm = DataManager(self.supabase)
+            dm.execute_safe(self.supabase.table("obras_jefes_obra").delete().eq("jefe_obra_id", self.jefe_id))
             dm.execute_safe(self.supabase.table("perfiles_usuario").delete().eq("id", self.jefe_id))
+            dm.invalidate_cache("jefes_obra")
             self.success.emit("Supervisor eliminado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al eliminar Supervisor: {str(e)}")

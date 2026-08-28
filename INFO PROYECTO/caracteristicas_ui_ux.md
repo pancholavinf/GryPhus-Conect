@@ -3,7 +3,7 @@
 **Organización**: Accuratek  
 **Fecha de Actualización**: Agosto 2026  
 **Ecosistema**: Trabs (Trabs Gerencia + Trabs Terreno)  
-**Versión de Producción**: 1.0.4  
+**Versión de Producción**: 1.0.5  
 **Documento**: Design System Oficial Trabs 2026, Tokens de Diseño, Tipografía, Especificación de Componentes y Principios UX
 
 ---
@@ -72,11 +72,17 @@ El sistema utiliza dos familias tipográficas de Google Fonts:
   * Botón `"⚡ Resincronizar Datos"` (`SidebarButtonSync`): Borde y texto en Ámbar Solar `#F3A500`.
   * Botón `"🔄 Buscar Actualizaciones"` (`SidebarButtonUpdate`): Borde y texto en Verde Oliva `#BEF264` / `#65A30D`.
   * Botón `"Cerrar Sesión"` (`SidebarButtonLogout`): Borde y texto en Rojo `#EF4444`.
-* **Badge Institucional**: Pie inferior centrado: `Trabs Gerencia v1.0.4 🟢 • Accuratek` en color `#94A3B8` y peso 600.
+* **Badge Institucional**: Pie inferior centrado: `Trabs Gerencia v1.0.5 🟢 • Accuratek` en color `#94A3B8` y peso 600.
 
-### 4.2 Diálogo de Actualizaciones (`UpdateDialog`)
+### 4.2 Tarjetas de Perfil Ultra Compactas (`ProfileHeaderCard` / `MaestroHeaderCard`)
+* **Dimensiones**: Altura visual contenida (~58-62 px), bordes redondeados `border-radius: 8px`, fondo `#F8FAFC` y borde `#E2E8F0`.
+* **Avatar Circular**: 48×48 px con `QPainterPath` y `QPainter.RenderHint.Antialiasing`.
+* **Políticas de Layout**: `QSizePolicy(Expanding, Fixed)` y espaciador `addStretch()` en el contenedor padre que impiden la expansión vertical indeseada.
+* **Acciones Contextuales**: Botones micro `"📷 Cambiar"` y `"✕ Quitar"` para gestión directa con el bucket de Storage.
+
+### 4.3 Diálogo de Actualizaciones (`UpdateDialog`)
 * **Modal Flotante de 540x460px**: Fondo Blanco Puro con cabecera en Antracita Oscuro `#2D3033`.
-* **Insignia de Versión**: Destaca la versión instalada vs. la versión nueva (`v1.0.3` ➔ `v1.0.4`).
+* **Insignia de Versión**: Destaca la versión instalada vs. la versión nueva (`v1.0.4` ➔ `v1.0.5`).
 * **Área de Notas de Lanzamiento**: Caja con scroll que renderiza en HTML enriquecido las novedades, correcciones y notas técnicas del Release en GitHub.
 * **Barra de Progreso y Métricas de Descarga**: Barra de progreso animada en Verde Esmeralda `#10B981` con indicación en tiempo real de:
   * Porcentaje completado (`45%`).
@@ -86,21 +92,21 @@ El sistema utiliza dos familias tipográficas de Google Fonts:
   * `"🚀 Actualizar Ahora"` (Botón Primario `#F3A500`).
   * `"Recordármelo más tarde"` (Botón Secundario `#808A92`).
 
-### 4.3 Pantalla de Login y Splash Screen
+### 4.4 Pantalla de Login y Splash Screen
 * **Splash Screen Animado**: Reproduce la animación institucional `animacion_trabs.gif` con temporizador de ~5.8s mientras comprueba en segundo plano el token de sesión (`SessionCheckWorker`).
 * **Auto-Login Transparente**: Si la sesión es válida, salta la pantalla de login directamente al Dashboard.
 * **Pantalla de Autenticación**:
   * Tarjeta centralizada con sombra suave.
   * Logotipo circular oficial con fondo blanco.
   * Precarga automática del último correo recordado.
-  * Pie institucional: `Trabs Gerencia v1.0.4 • Accuratek`.
+  * Pie institucional: `Trabs Gerencia v1.0.5 • Accuratek`.
 
-### 4.4 Tablas de Datos (`QTableWidget`)
+### 4.5 Tablas de Datos (`QTableWidget`)
 * **Encabezados**: Fondo `#2D3033`, texto en `#FFFFFF`, fuente `Inter-SemiBold` (13px), altura fija de 36px y borde inferior sutil en `#F3A500`.
 * **Filas y Celdas**: Altura de 34px, texto en `#1F2115`, líneas divisorias en `#E5E7EB` y efecto hover en gris claro `#F9FAFB`.
 * **Selección**: Color de acento `#F3A500` al seleccionar filas.
 
-### 4.5 Tooltips Modernos (`QToolTip`)
+### 4.6 Tooltips Modernos (`QToolTip`)
 * **Estilizado en `style.qss`**:
   ```qss
   QToolTip {

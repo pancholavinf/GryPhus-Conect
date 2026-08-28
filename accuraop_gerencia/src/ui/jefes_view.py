@@ -2,10 +2,10 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
     QMessageBox, QFormLayout, QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QComboBox, QSplitter, QGroupBox, QScrollArea, QFrame,
-    QFileDialog
+    QFileDialog, QSizePolicy
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QPainter, QPainterPath
 from src.core.workers import (
     FetchJefesWorker, FetchObrasWorker, CreateJefeWorker, AssignJefeWorker,
     UpdateJefeWorker, DeleteJefeWorker, UploadFotoPerfilWorker
@@ -19,6 +19,7 @@ class JefesContent(QWidget):
         self.supabase_client = supabase_client
         self.jefes_data = []
         self.current_jefe = None
+        self.current_foto_url = ""
         self.is_editing = False
 
         main_layout = QVBoxLayout(self)
@@ -92,34 +93,126 @@ class JefesContent(QWidget):
         right_container = QWidget()
         right_container.setStyleSheet("background-color: #FFFFFF;")
         self.right_layout = QVBoxLayout(right_container)
-        self.right_layout.setContentsMargins(20, 20, 20, 20)
-        self.right_layout.setSpacing(15)
+        self.right_layout.setContentsMargins(14, 14, 14, 14)
+        self.right_layout.setSpacing(10)
 
-        # Header del Detalle + Botón Editar
-        detail_header_layout = QHBoxLayout()
-        self.lbl_detail_title = QLabel("Detalle del Supervisor")
-        self.lbl_detail_title.setStyleSheet("font-size: 18px; font-weight: 800; color: #1F2115; background: transparent;")
+        # ── 1. Tarjeta Superior de Perfil Ultra Compacta (Foto 48x48 + Datos clave + Botón Editar) ──
+        header_card = QFrame()
+        header_card.setObjectName("ProfileHeaderCard")
+        header_card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_card.setStyleSheet("""
+            QFrame#ProfileHeaderCard {
+                background-color: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+            }
+        """)
+        header_card_layout = QHBoxLayout(header_card)
+        header_card_layout.setContentsMargins(10, 6, 10, 6)
+        header_card_layout.setSpacing(10)
 
-        self.btn_edit = QPushButton("️ Editar Perfil")
+        # Foto de perfil superior compacta circular (48x48 px)
+        self.lbl_photo_preview = QLabel()
+        self.lbl_photo_preview.setFixedSize(48, 48)
+        self.lbl_photo_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_photo_preview.setStyleSheet("""
+            QLabel {
+                border: 2px solid #CBD5E1;
+                border-radius: 24px;
+                background-color: #FFFFFF;
+                color: #64748B;
+                font-weight: bold;
+                font-size: 10px;
+            }
+        """)
+        header_card_layout.addWidget(self.lbl_photo_preview)
+
+        # Info resumida del Supervisor
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(1)
+        info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        self.lbl_detail_title = QLabel("Seleccione o cree un Supervisor")
+        self.lbl_detail_title.setStyleSheet("font-size: 14px; font-weight: 700; color: #1F2115; background: transparent; font-family: 'Montserrat', sans-serif;")
+        self.lbl_detail_title.setWordWrap(True)
+
+        self.lbl_detail_sub = QLabel("Supervisor de Faena")
+        self.lbl_detail_sub.setStyleSheet("font-size: 11px; color: #64748B; background: transparent; font-weight: 500;")
+
+        # Botones para seleccionar / quitar foto
+        photo_btn_row = QHBoxLayout()
+        photo_btn_row.setSpacing(4)
+
+        self.btn_upload_foto = QPushButton("📷 Cambiar")
+        self.btn_upload_foto.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_upload_foto.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF; color: #0369A1;
+                border: 1px solid #BAE6FD; border-radius: 4px;
+                padding: 2px 8px; font-weight: 600; font-size: 10px;
+            }
+            QPushButton:hover { background-color: #E0F2FE; }
+            QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; }
+        """)
+        self.btn_upload_foto.clicked.connect(self._seleccionar_foto)
+        self.btn_upload_foto.setVisible(False)
+
+        self.btn_remove_foto = QPushButton("✕ Quitar")
+        self.btn_remove_foto.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_remove_foto.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF; color: #DC2626;
+                border: 1px solid #FECACA; border-radius: 4px;
+                padding: 2px 6px; font-weight: 600; font-size: 10px;
+            }
+            QPushButton:hover { background-color: #FEE2E2; }
+        """)
+        self.btn_remove_foto.clicked.connect(self._quitar_foto)
+        self.btn_remove_foto.setVisible(False)
+
+        photo_btn_row.addWidget(self.btn_upload_foto)
+        photo_btn_row.addWidget(self.btn_remove_foto)
+        photo_btn_row.addStretch()
+
+        info_layout.addWidget(self.lbl_detail_title)
+        info_layout.addWidget(self.lbl_detail_sub)
+        info_layout.addLayout(photo_btn_row)
+
+        header_card_layout.addLayout(info_layout, stretch=1)
+
+        # Botón Editar
+        self.btn_edit = QPushButton("✏️ Editar")
         self.btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_edit.setStyleSheet("""
             QPushButton {
-                background-color: #D97706; color: white; border-radius: 6px;
-                padding: 7px 14px; font-weight: 700; font-size: 13px; border: none;
+                background-color: #D97706; color: white; border-radius: 5px;
+                padding: 5px 12px; font-weight: 700; font-size: 12px; border: none;
             }
             QPushButton:hover { background-color: #B45309; }
         """)
         self.btn_edit.clicked.connect(self.activar_edicion)
         self.btn_edit.setVisible(False)
+        header_card_layout.addWidget(self.btn_edit, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        detail_header_layout.addWidget(self.lbl_detail_title, stretch=1)
-        detail_header_layout.addWidget(self.btn_edit)
-        self.right_layout.addLayout(detail_header_layout)
+        self.right_layout.addWidget(header_card)
 
-        # Formulario de datos básicos
+        # ── 2. Formulario de Datos Básicos (con títulos claros y espaciados) ──
         form_group = QGroupBox("Información del Supervisor")
+        form_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        form_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold; font-size: 12px; color: #1F2115;
+                border: 1px solid #E2E8F0; border-radius: 8px;
+                margin-top: 10px; padding-top: 14px; padding-bottom: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; subcontrol-position: top left;
+                padding: 0 8px; left: 10px; color: #2D3033;
+            }
+        """)
         form_layout = QFormLayout(form_group)
-        form_layout.setVerticalSpacing(10)
+        form_layout.setVerticalSpacing(8)
+        form_layout.setHorizontalSpacing(12)
 
         self.txt_nombre = QLineEdit()
         self.txt_nombre.setPlaceholderText("Ej: Juan Pérez")
@@ -149,63 +242,35 @@ class JefesContent(QWidget):
         form_layout.addRow("Rol en Sistema:", self.lbl_rol_val)
         self.right_layout.addWidget(form_group)
 
-        # Sección Foto Perfil
-        photo_group = QGroupBox("Fotografía de Perfil")
-        photo_layout = QHBoxLayout(photo_group)
-
-        self.lbl_photo_preview = QLabel("Sin Foto")
-        self.lbl_photo_preview.setFixedSize(100, 100)
-        self.lbl_photo_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_photo_preview.setStyleSheet("border: 1px dashed #94A3B8; border-radius: 50px; background: #F8FAFC; color: #2D3033; font-weight: bold;")
-
-        photo_inputs_layout = QVBoxLayout()
-
-        # URL (solo lectura visual — la BD almacena aquí la URL)
-        self.txt_foto_url = QLineEdit()
-        self.txt_foto_url.setPlaceholderText("URL de la foto (se llena automáticamente al subir)")
-        self.txt_foto_url.setReadOnly(True)
-        self.txt_foto_url.setStyleSheet("color: #64748B; background: #F1F5F9;")
-        self.txt_foto_url.textChanged.connect(self.actualizar_preview_foto)
-
-        # Botón para subir foto desde dispositivo
-        self.btn_upload_foto = QPushButton("📁  Seleccionar foto desde dispositivo")
-        self.btn_upload_foto.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_upload_foto.setStyleSheet("""
-            QPushButton {
-                background-color: #F0F9FF; color: #0369A1;
-                border: 1px solid #BAE6FD; border-radius: 5px;
-                padding: 6px 12px; font-weight: 600;
-            }
-            QPushButton:hover { background-color: #E0F2FE; }
-            QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; }
-        """)
-        self.btn_upload_foto.clicked.connect(self._seleccionar_foto)
-        self.btn_upload_foto.setEnabled(False)  # solo activo en modo edición
-
-        photo_inputs_layout.addWidget(QLabel("URL almacenada:"))
-        photo_inputs_layout.addWidget(self.txt_foto_url)
-        photo_inputs_layout.addWidget(self.btn_upload_foto)
-        photo_inputs_layout.addStretch()
-
-        photo_layout.addWidget(self.lbl_photo_preview)
-        photo_layout.addLayout(photo_inputs_layout)
-        self.right_layout.addWidget(photo_group)
-
-        # Sección Asignación de Obra
+        # ── 3. Sección Asignación de Obra ──
         asign_group = QGroupBox("Asignación de Obra Destino")
+        asign_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        asign_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold; font-size: 12px; color: #1F2115;
+                border: 1px solid #E2E8F0; border-radius: 8px;
+                margin-top: 10px; padding-top: 14px; padding-bottom: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; subcontrol-position: top left;
+                padding: 0 8px; left: 10px; color: #2D3033;
+            }
+        """)
         asign_layout = QFormLayout(asign_group)
+        asign_layout.setVerticalSpacing(8)
+        asign_layout.setHorizontalSpacing(12)
 
         self.combo_obras = QComboBox()
         self.btn_asignar = QPushButton("Asignar a Obra")
         self.btn_asignar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_asignar.setStyleSheet("QPushButton { background-color: #F3A500; color: white; font-weight: 600; padding: 7px 14px; border-radius: 4px; } QPushButton:hover { background-color: #0369A1; }")
+        self.btn_asignar.setStyleSheet("QPushButton { background-color: #F3A500; color: white; font-weight: 600; padding: 7px 14px; border-radius: 4px; } QPushButton:hover { background-color: #D97706; }")
         self.btn_asignar.clicked.connect(self.asignar_jefe_obra)
 
         asign_layout.addRow("Obra Destino:", self.combo_obras)
         asign_layout.addRow("", self.btn_asignar)
         self.right_layout.addWidget(asign_group)
 
-        # Botones de Acción
+        # ── 4. Botones de Acción ──
         actions_layout = QHBoxLayout()
         self.btn_save = QPushButton("Guardar Cambios")
         self.btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -217,7 +282,7 @@ class JefesContent(QWidget):
         self.btn_cancel.setStyleSheet("background-color: #2D3033; color: white; border-radius: 6px; padding: 9px 16px; font-weight: 600;")
         self.btn_cancel.clicked.connect(self.cancelar_edicion)
 
-        self.btn_delete = QPushButton("️ Eliminar Supervisor")
+        self.btn_delete = QPushButton("🗑️ Eliminar Supervisor")
         self.btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_delete.setStyleSheet("QPushButton { color: #DC2626; border: 1px solid #DC2626; border-radius: 6px; padding: 8px 14px; background: transparent; font-weight: 600; } QPushButton:hover { background: #FEF2F2; }")
         self.btn_delete.clicked.connect(self.eliminar_jefe)
@@ -228,6 +293,7 @@ class JefesContent(QWidget):
         actions_layout.addWidget(self.btn_delete)
 
         self.right_layout.addLayout(actions_layout)
+        self.right_layout.addStretch()
 
         right_scroll.setWidget(right_container)
         splitter.addWidget(right_scroll)
@@ -255,7 +321,9 @@ class JefesContent(QWidget):
         self.lbl_pwd_tag.setVisible(self.current_jefe is None)
         self.txt_password.setVisible(self.current_jefe is None)
         self.txt_telefono.setEnabled(enabled)
-        self.btn_upload_foto.setEnabled(enabled)
+        
+        self.btn_upload_foto.setVisible(enabled)
+        self.btn_remove_foto.setVisible(enabled and bool(self.current_foto_url))
 
         self.btn_save.setVisible(enabled)
         self.btn_cancel.setVisible(enabled)
@@ -271,21 +339,22 @@ class JefesContent(QWidget):
         self.table.clearSelection()
         self.limpiar_formulario()
         self.lbl_detail_title.setText("Crear Nuevo Supervisor")
+        self.lbl_detail_sub.setText("Completar datos de acceso y perfil")
         self.set_editing_mode(True)
         self.txt_nombre.setFocus()
 
     def limpiar_formulario(self):
         self.current_jefe = None
+        self.current_foto_url = ""
         self.lbl_detail_title.setText("Seleccione o cree un Supervisor")
+        self.lbl_detail_sub.setText("Supervisor de Faena")
 
         self.txt_nombre.clear()
         self.txt_rut.clear()
         self.txt_email.clear()
         self.txt_password.clear()
         self.txt_telefono.clear()
-        self.txt_foto_url.clear()
-        self.lbl_photo_preview.setText("Sin Foto")
-        self.lbl_photo_preview.setPixmap(QPixmap())
+        self.actualizar_preview_foto("")
 
         self.set_editing_mode(False)
 
@@ -336,7 +405,7 @@ class JefesContent(QWidget):
             nombre = str(j.get("nombre", ""))
             rol_raw = str(j.get("rol", ""))
             # Mapeo local: valores de BD → etiqueta visual
-            rol = "Supervisor" if rol_raw.lower() in ("jefe_obra", "jefe obra") else rol_raw
+            rol = "Supervisor" if rol_raw.strip().lower() in ("jefe_obra", "jefe obra", "supervisor") else rol_raw
             telefono = str(j.get("telefono", ""))
             foto = "Sí" if j.get("foto_perfil_url") else "No"
 
@@ -362,35 +431,63 @@ class JefesContent(QWidget):
 
     def cargar_detalle_jefe(self, jefe):
         self.current_jefe = jefe
-        self.lbl_detail_title.setText(f"{jefe.get('nombre', '')}")
-        self.txt_nombre.setText(jefe.get("nombre", "") or "")
+        nombre = jefe.get('nombre', '') or "Sin Nombre"
+        email = jefe.get('email', '') or ""
+        self.lbl_detail_title.setText(nombre)
+        self.lbl_detail_sub.setText(f"Supervisor • {email}" if email else "Supervisor de Faena")
+        self.txt_nombre.setText(nombre)
         self.txt_rut.setText(jefe.get("rut_dni", "") or "")
-        self.txt_email.setText(jefe.get("email", "") or "")
+        self.txt_email.setText(email)
         self.txt_telefono.setText(jefe.get("telefono", "") or "")
-        self.txt_foto_url.setText(jefe.get("foto_perfil_url", "") or "")
-        self.actualizar_preview_foto(jefe.get("foto_perfil_url", "") or "")
+        self.current_foto_url = jefe.get("foto_perfil_url", "") or ""
+        self.actualizar_preview_foto(self.current_foto_url)
 
         self.set_editing_mode(False)
 
     def actualizar_preview_foto(self, url):
-        url = url.strip()
+        url = (url or "").strip()
+        self.current_foto_url = url
         if not url:
             self.lbl_photo_preview.setText("Sin Foto")
             self.lbl_photo_preview.setPixmap(QPixmap())
+            self.btn_remove_foto.setVisible(False)
             return
+
+        self.btn_remove_foto.setVisible(self.is_editing)
         try:
             res = requests.get(url, timeout=3)
             if res.status_code == 200:
                 pix = QPixmap()
                 if pix.loadFromData(res.content):
-                    scaled = pix.scaled(self.lbl_photo_preview.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    self.lbl_photo_preview.setPixmap(scaled)
+                    scaled = pix.scaled(
+                        self.lbl_photo_preview.size(),
+                        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    # Recorte circular
+                    target = QPixmap(self.lbl_photo_preview.size())
+                    target.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(target)
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    path = QPainterPath()
+                    path.addEllipse(0, 0, self.lbl_photo_preview.width(), self.lbl_photo_preview.height())
+                    painter.setClipPath(path)
+                    x = (self.lbl_photo_preview.width() - scaled.width()) // 2
+                    y = (self.lbl_photo_preview.height() - scaled.height()) // 2
+                    painter.drawPixmap(x, y, scaled)
+                    painter.end()
+                    self.lbl_photo_preview.setText("")
+                    self.lbl_photo_preview.setPixmap(target)
                     return
         except Exception:
             pass
-        self.lbl_photo_preview.setText("Foto URL")
+        self.lbl_photo_preview.setText("Foto")
 
-    # --- FOTO DE PERFIL: subida al bucket ---
+    # --- FOTO DE PERFIL: subida y eliminación ---
+
+    def _quitar_foto(self):
+        self.current_foto_url = ""
+        self.actualizar_preview_foto("")
 
     def _seleccionar_foto(self):
         """Abre diálogo para seleccionar imagen local y la sube al bucket 'accuratek-data' (carpeta personal/)."""
@@ -408,7 +505,7 @@ class JefesContent(QWidget):
             return  # usuario canceló
 
         self.btn_upload_foto.setEnabled(False)
-        self.btn_upload_foto.setText("⏳  Subiendo...")
+        self.btn_upload_foto.setText("⏳ Subiendo...")
 
         self.upload_worker = UploadFotoPerfilWorker(self.supabase_client, file_path, subfolder="personal")
         self.upload_worker.success.connect(self._on_foto_subida)
@@ -416,14 +513,15 @@ class JefesContent(QWidget):
         self.upload_worker.start()
 
     def _on_foto_subida(self, url: str):
-        """Callback cuando la foto se sube correctamente — rellena el campo URL."""
+        """Callback cuando la foto se sube correctamente."""
         self.btn_upload_foto.setEnabled(True)
-        self.btn_upload_foto.setText("📁  Seleccionar foto desde dispositivo")
-        self.txt_foto_url.setText(url)   # dispara actualizar_preview_foto vía textChanged
+        self.btn_upload_foto.setText("📷 Cambiar Foto")
+        self.current_foto_url = url
+        self.actualizar_preview_foto(url)
 
     def _on_foto_error(self, msg: str):
         self.btn_upload_foto.setEnabled(True)
-        self.btn_upload_foto.setText("📁  Seleccionar foto desde dispositivo")
+        self.btn_upload_foto.setText("📷 Cambiar Foto")
         QMessageBox.critical(self, "Error al subir foto", msg)
 
     def cargar_combos(self):
@@ -445,7 +543,7 @@ class JefesContent(QWidget):
         email = self.txt_email.text().strip()
         password = self.txt_password.text().strip()
         telefono = self.txt_telefono.text().strip()
-        foto_url = self.txt_foto_url.text().strip()
+        foto_url = self.current_foto_url.strip()
 
         if not nombre:
             QMessageBox.warning(self, "Campos obligatorios", "Por favor ingrese el Nombre Completo.")

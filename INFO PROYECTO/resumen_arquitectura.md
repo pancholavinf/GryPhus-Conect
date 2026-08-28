@@ -2,7 +2,7 @@
 
 **Organización**: Accuratek  
 **Fecha de Actualización**: Agosto 2026  
-**Estado del Proyecto**: Operativo en Producción E2E / Ingesta, Control de Personal, Asistencia, Avances, Bitácoras, Emisión Inmutable de EDP, Persistencia de Sesión y Auto-Actualizaciones Continuas (v1.0.4)  
+**Estado del Proyecto**: Operativo en Producción E2E / Ingesta, Control de Personal, Asistencia, Avances, Bitácoras, Emisión Inmutable de EDP, Persistencia de Sesión y Auto-Actualizaciones Continuas (v1.0.5)  
 **Autor**: Antigravity Coding Assistant & Accuratek Engineering Team  
 **Documento**: Arquitectura Técnica Integral, Conectividad, Ecosistema Multiplataforma y Modelo de Datos
 
@@ -14,13 +14,14 @@ El ecosistema **Trabs** (desarrollado por **Accuratek**) es una plataforma tecno
 
 El sistema opera sobre un backend en la nube basado en **Supabase** (PostgreSQL 15+, Auth y S3-compatible Storage) junto a un canal de distribución continua en **GitHub Releases**, articulándose en dos aplicaciones nativas con responsabilidades desacopladas:
 
-1. **Trabs Gerencia (`accuraop_gerencia`)**: Aplicación de escritorio desarrollada en **Python 3.10+** y **PyQt6**. Diseñada para la alta dirección, administradores de contrato y gerencia operativa. Centraliza la ingesta masiva de cubicaciones desde planillas Excel, la administración del catálogo maestro de materiales y personal (cargos, tarifas y maestros), el monitoreo analítico en tiempo real con dashboards gráficos interactivos de **Matplotlib**, la auditoría visual de avances con evidencia fotográfica y la emisión inmutable de **Estados de Pago (EDP)** con compilación de PDF oficial mediante **ReportLab**. Cuenta con sistema de **Auto-Login persistente** (`QSettings`), motor de **Auto-Actualizaciones integradas** con GitHub Releases y empaquetado autónomo ejecutable para Windows (**Inno Setup v1.0.4**).
-2. **Trabs Terreno (`accuraop_terreno`)**: Aplicación móvil desarrollada en **React Native** con **Expo SDK 54**. Diseñada para los Jefes de Obra y supervisores en el frente de faena. Opera bajo una arquitectura estricta **Offline-First** apoyada en una base de datos local **SQLite (`accuraop.db`)** y una caché reactiva en memoria (`memoryCache.js`). Permite registrar avances físicos por $m^2$ con captura obligatoria de fotos, tomar la asistencia diaria del personal asignado (con foto de grupo y soporte correctivo), redactar la bitácora diaria de incidentes/novedades y registrar el consumo diario de insumos. Cuenta con un pipeline de sincronización bidireccional en segundo plano (`sync.js`) y suite de pruebas automatizadas en 6 niveles.
+1. **Trabs Gerencia (`accuraop_gerencia`)**: Aplicación de escritorio desarrollada en **Python 3.10+** y **PyQt6**. Diseñada para la alta dirección, administradores de contrato y gerencia operativa. Centraliza la ingesta masiva de cubicaciones desde planillas Excel, la administración de supervisores/jefes de obra con creación aislada en Auth y asignación matricial a faenas (`jefes_view.py`), la administración del catálogo maestro de materiales y personal (cargos, tarifas y maestros con tarjetas de perfil compactas y avatar antialiased), el monitoreo analítico en tiempo real con dashboards gráficos interactivos de **Matplotlib**, el módulo de **Ítems de Obra** con buscador instantáneo, filtros de estado y ficha técnica sincronizada por partida con histórico de avances, la auditoría visual de evidencias y la emisión inmutable de **Estados de Pago (EDP)** con compilación de PDF oficial mediante **ReportLab**. Cuenta con sistema de **Auto-Login persistente** (`QSettings`), motor de **Auto-Actualizaciones integradas** con GitHub Releases y empaquetado autónomo ejecutable para Windows (**Inno Setup v1.0.5**).
+2. **Trabs Terreno (`accuraop_terreno`)**: Aplicación móvil desarrollada en **React Native** con **Expo SDK 54**. Diseñada para los Jefes de Obra y supervisores en el frente de faena. Opera bajo una arquitectura estricta **Offline-First** apoyada en una base de datos local **SQLite (`accuraop.db`)** y una caché reactiva en memoria (`memoryCache.js`). Permite registrar avances físicos por $m^2$ de forma individual o mediante **lotes multi-ítem con una sola foto de respaldo** (con subida deduplicada a Supabase Storage), tomar la asistencia diaria del personal asignado (con foto de grupo y soporte correctivo), redactar la bitácora diaria de incidentes/novedades y registrar el consumo diario de insumos. Cuenta con un pipeline de sincronización bidireccional en segundo plano (`sync.js`) y suite de pruebas automatizadas en 7 niveles.
 
 ```mermaid
 graph TB
     subgraph Cloud["Backend Centralizado (Supabase Cloud)"]
         AUTH["Supabase Auth (JWT + Session Refresh)"]
+        TRIGGER["Trigger: on_auth_user_created (Auto-Profile Sync)"]
         DB[("PostgreSQL 15+ (12 Tablas + RLS)")]
         STORAGE["Storage: accuratek-data (Fotos, Planillas, EDPs)"]
     end
@@ -35,6 +36,7 @@ graph TB
         DASH["Dashboard & Asistencia Hoy"]
         INGEST["Ingesta Excel & Diálogo Precios"]
         AUDIT["Auditoría Avances & Matplotlib"]
+        JEFES["Gestión Supervisores & Asignación"]
         PERS["Control Personal & Maestros"]
         EDP["Cierre Financiero & EDP (ReportLab)"]
         DM["DataManager (TTL Cache & Thread-Safe)"]
@@ -47,12 +49,12 @@ graph TB
         M_AUTH["LoginScreen (Auth Session)"]
         M_HOME["HomeScreen (Selector de Obra)"]
         M_MENU["ObraMenu (4 Vías de Operación)"]
-        M_AVANCE["SelectionFlow (Avance + Foto)"]
+        M_AVANCE["SelectionFlow (Multi-Ítem + Foto Única)"]
         M_ASIST["Asistencia (Foto + Desglose Lista)"]
         M_BIT["ReporteDiario (Bitácora + Consumos)"]
         M_CTRL["ControlObra (Nómina Offline)"]
         SQLITE[("SQLite Local: accuraop.db")]
-        SYNC["sync.js (Auto-Sync NetInfo + ArrayBuffer)"]
+        SYNC["sync.js (Auto-Sync NetInfo + Deduplicación Storage)"]
     end
 
     Desktop <-->|REST API / Supabase-py| Cloud
@@ -78,6 +80,7 @@ La configuración de endpoints y credenciales se gestiona de forma aislada media
 
 ### 2.2 Autenticación, Autorización y Persistencia
 * **Supabase Auth**: Autenticación basada en correo y contraseña. Los tokens de acceso (JWT) y de refresco permiten mantener sesiones válidas.
+* **Sincronización Automática de Perfiles (`on_auth_user_created`)**: Un disparador en PostgreSQL intercepta cualquier alta en `auth.users` y actualiza/inserta inmediatamente el registro correspondiente en `public.perfiles_usuario` (nombre, rol, email, teléfono, foto y rut).
 * **Control de Roles por Aplicación**:
   * Rol `'administrador'`: Acceso total a la aplicación de escritorio (`accuraop_gerencia`) y permisos administrativos en la base de datos.
   * Rol `'jefe_obra'`: Acceso restringido exclusivamente a la aplicación móvil (`accuraop_terreno`). Si un usuario con rol `'jefe_obra'` intenta iniciar sesión en el escritorio, los hilos `LoginWorker` y `SessionCheckWorker` rechazan el acceso y cierran la sesión automáticamente.
@@ -85,7 +88,7 @@ La configuración de endpoints y credenciales se gestiona de forma aislada media
 
 ### 2.3 Políticas de Seguridad a Nivel de Fila (RLS)
 Todas las tablas del esquema PostgreSQL tienen activada la directiva **Row-Level Security (RLS)**:
-* La función `public.es_administrador()` (`SECURITY DEFINER`) evalúa el rol administrativo sin provocar bucles de recursión infinita en las consultas sobre `perfiles_usuario`.
+* La función `public.es_administrador()` (`SECURITY DEFINER`) evalúa el rol administrativo sin provocar bucles de recursión infinita en las consultas sobre `perfiles_usuario`, normalizando con `TRIM(LOWER(rol))` para resistir inconsistencias de formato.
 * Las políticas unificadas permiten operaciones fluidas de consulta, inserción y `.upsert()` para usuarios autenticados, manteniendo el filtrado contextual de obras asignadas (`obras_jefes_obra` y `obras_maestros`).
 
 ### 2.4 Almacenamiento Centralizado Unificado (`accuratek-data`)

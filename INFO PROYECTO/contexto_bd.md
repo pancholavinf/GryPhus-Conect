@@ -319,19 +319,56 @@ $$;
 ```
 
 ### 3.4 Función `es_administrador()`
-Función `SECURITY DEFINER` para evitar recursión infinita en las políticas SQL:
+Función `SECURITY DEFINER` para evaluar el rol administrativo sin recursión infinita en las políticas SQL, robustecida contra variaciones de mayúsculas/minúsculas y espacios en blanco:
 ```sql
 CREATE OR REPLACE FUNCTION public.es_administrador()
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 SECURITY DEFINER
-STABLE
 AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM public.perfiles_usuario
-        WHERE id = auth.uid() AND rol = 'administrador'
-    );
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.perfiles_usuario
+    WHERE id = auth.uid() AND TRIM(LOWER(rol)) IN ('administrador', 'admin')
+  );
+END;
 $$;
+```
+
+### 3.5 Trigger Automático de Sincronización `on_auth_user_created`
+Función y disparador que sincronizan automáticamente cada nuevo registro en `auth.users` con la tabla pública `public.perfiles_usuario`:
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.perfiles_usuario (id, email, nombre, rol, telefono, foto_perfil_url, rut_dni)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'nombre', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    CASE 
+      WHEN LOWER(COALESCE(NEW.raw_user_meta_data->>'rol', '')) IN ('administrador', 'admin', 'gerente') THEN 'administrador'
+      ELSE 'jefe_obra'
+    END,
+    COALESCE(NEW.raw_user_meta_data->>'telefono', ''),
+    COALESCE(NEW.raw_user_meta_data->>'foto_perfil_url', ''),
+    COALESCE(NEW.raw_user_meta_data->>'rut_dni', NULL)
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    nombre = COALESCE(NULLIF(EXCLUDED.nombre, ''), perfiles_usuario.nombre),
+    rol = COALESCE(NULLIF(EXCLUDED.rol, ''), perfiles_usuario.rol),
+    telefono = COALESCE(NULLIF(EXCLUDED.telefono, ''), perfiles_usuario.telefono),
+    foto_perfil_url = COALESCE(NULLIF(EXCLUDED.foto_perfil_url, ''), perfiles_usuario.foto_perfil_url),
+    rut_dni = COALESCE(NULLIF(EXCLUDED.rut_dni, ''), perfiles_usuario.rut_dni);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
 ---
@@ -371,3 +408,4 @@ El sistema centraliza todos los archivos multimedia y documentos en el bucket p�
 4. **`004_estados_pago.sql`** (2026-08-03): Creación de la tabla `estados_pago`, adición de la columna `estado_pago_id` en `avances`, vista `v_edp_resumen`, función concurrente `get_next_edp_number` y bucket `estados_pago`.
 5. **`005_rut_foto_perfil_personal.sql`** (2026-08-05): Incorporación del campo `rut_dni` a la tabla `perfiles_usuario` para homologación con los maestros de terreno.
 6. **`006_unify_storage_accuratek_data.sql`** (2026-08-27): Unificación integral de almacenamiento en el bucket `accuratek-data` y consolidación de políticas RLS públicas para lectura, inserción, actualización y borrado.
+7. **`007_fix_supervisores_perfiles_triggers.sql`** (2026-08-28): Saneamiento integral de caracteres especiales y roles en `perfiles_usuario`, sincronización de emails faltantes con `auth.users`, eliminación de registros huérfanos sin autenticación, creación del trigger `on_auth_user_created` para creación automática de perfiles y robustecimiento de `es_administrador()`.

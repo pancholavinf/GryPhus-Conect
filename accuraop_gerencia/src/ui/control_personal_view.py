@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QFileDialog
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QDoubleValidator, QPixmap
+from PyQt6.QtGui import QDoubleValidator, QPixmap, QPainter, QPainterPath
 from src.core.workers import (
     FetchJefesWorker, FetchObrasWorker, CreateJefeWorker, AssignJefeWorker,
     FetchTiposMaestroWorker, CreateTipoMaestroWorker, UpdateTipoMaestroWorker,
@@ -63,6 +63,7 @@ class MaestrosTab(QWidget):
         self._tipos = []
         self.maestros_data = []
         self.current_maestro = None
+        self.current_foto_url = ""
         self.is_editing = False
 
         main_layout = QVBoxLayout(self)
@@ -102,7 +103,7 @@ class MaestrosTab(QWidget):
 
         # Búsqueda
         self.txt_search = QLineEdit()
-        self.txt_search.setPlaceholderText("Buscar por nombre, RUT, cargo o teléfono...")
+        self.txt_search.setPlaceholderText("Buscar por nombre, RUT, teléfono o cargo...")
         self.txt_search.setClearButtonEnabled(True)
         self.txt_search.textChanged.connect(self.filtrar_tabla)
         left_layout.addWidget(self.txt_search)
@@ -113,13 +114,14 @@ class MaestrosTab(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setMinimumSectionSize(110)
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["Nombre", "RUT/DNI", "Tipo/Cargo", "Sueldo Diario", "Teléfono", "Estado"])
+        self.table.setHorizontalHeaderLabels(["Nombre", "RUT / DNI", "Cargo", "Sueldo Diario", "Teléfono", "Estado"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.Interactive)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -129,7 +131,7 @@ class MaestrosTab(QWidget):
         left_layout.addWidget(self.table)
         splitter.addWidget(left_widget)
 
-        # --- PANEL DERECHO: Detalle / Edición ---
+        # --- PANEL DERECHO: Detalle y Edición (FONDO BLANCO PURO) ---
         right_scroll = QScrollArea()
         right_scroll.setWidgetResizable(True)
         right_scroll.setStyleSheet("QScrollArea { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; }")
@@ -137,34 +139,126 @@ class MaestrosTab(QWidget):
         right_container = QWidget()
         right_container.setStyleSheet("background-color: #FFFFFF;")
         self.right_layout = QVBoxLayout(right_container)
-        self.right_layout.setContentsMargins(20, 20, 20, 20)
-        self.right_layout.setSpacing(15)
+        self.right_layout.setContentsMargins(14, 14, 14, 14)
+        self.right_layout.setSpacing(10)
 
-        # Header del Detalle + Botón Editar
-        detail_header_layout = QHBoxLayout()
-        self.lbl_detail_title = QLabel("Detalle del Maestro")
-        self.lbl_detail_title.setStyleSheet("font-size: 18px; font-weight: 800; color: #1F2115; background: transparent;")
+        # ── 1. Tarjeta Superior de Perfil del Maestro Ultra Compacta ──
+        header_card = QFrame()
+        header_card.setObjectName("MaestroHeaderCard")
+        header_card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_card.setStyleSheet("""
+            QFrame#MaestroHeaderCard {
+                background-color: #F8FAFC;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+            }
+        """)
+        header_card_layout = QHBoxLayout(header_card)
+        header_card_layout.setContentsMargins(10, 6, 10, 6)
+        header_card_layout.setSpacing(10)
 
-        self.btn_edit = QPushButton("️ Editar Perfil")
+        # Foto de perfil superior compacta circular (48x48 px)
+        self.lbl_photo_preview = QLabel()
+        self.lbl_photo_preview.setFixedSize(48, 48)
+        self.lbl_photo_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_photo_preview.setStyleSheet("""
+            QLabel {
+                border: 2px solid #CBD5E1;
+                border-radius: 24px;
+                background-color: #FFFFFF;
+                color: #64748B;
+                font-weight: bold;
+                font-size: 10px;
+            }
+        """)
+        header_card_layout.addWidget(self.lbl_photo_preview)
+
+        # Info del Maestro
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(1)
+        info_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        self.lbl_detail_title = QLabel("Seleccione o cree un Maestro")
+        self.lbl_detail_title.setStyleSheet("font-size: 14px; font-weight: 700; color: #1F2115; background: transparent; font-family: 'Montserrat', sans-serif;")
+        self.lbl_detail_title.setWordWrap(True)
+
+        self.lbl_detail_sub = QLabel("Personal Técnico de Faena")
+        self.lbl_detail_sub.setStyleSheet("font-size: 11px; color: #64748B; background: transparent; font-weight: 500;")
+
+        # Botones para seleccionar / quitar foto
+        photo_btn_row = QHBoxLayout()
+        photo_btn_row.setSpacing(4)
+
+        self.btn_upload_foto = QPushButton("📷 Cambiar")
+        self.btn_upload_foto.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_upload_foto.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF; color: #0369A1;
+                border: 1px solid #BAE6FD; border-radius: 4px;
+                padding: 2px 8px; font-weight: 600; font-size: 10px;
+            }
+            QPushButton:hover { background-color: #E0F2FE; }
+            QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; }
+        """)
+        self.btn_upload_foto.clicked.connect(self._seleccionar_foto)
+        self.btn_upload_foto.setVisible(False)
+
+        self.btn_remove_foto = QPushButton("✕ Quitar")
+        self.btn_remove_foto.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_remove_foto.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF; color: #DC2626;
+                border: 1px solid #FECACA; border-radius: 4px;
+                padding: 2px 6px; font-weight: 600; font-size: 10px;
+            }
+            QPushButton:hover { background-color: #FEE2E2; }
+        """)
+        self.btn_remove_foto.clicked.connect(self._quitar_foto)
+        self.btn_remove_foto.setVisible(False)
+
+        photo_btn_row.addWidget(self.btn_upload_foto)
+        photo_btn_row.addWidget(self.btn_remove_foto)
+        photo_btn_row.addStretch()
+
+        info_layout.addWidget(self.lbl_detail_title)
+        info_layout.addWidget(self.lbl_detail_sub)
+        info_layout.addLayout(photo_btn_row)
+
+        header_card_layout.addLayout(info_layout, stretch=1)
+
+        # Botón Editar
+        self.btn_edit = QPushButton("✏️ Editar")
         self.btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_edit.setStyleSheet("""
             QPushButton {
-                background-color: #D97706; color: white; border-radius: 6px;
-                padding: 7px 14px; font-weight: 700; font-size: 13px; border: none;
+                background-color: #D97706; color: white; border-radius: 5px;
+                padding: 5px 12px; font-weight: 700; font-size: 12px; border: none;
             }
             QPushButton:hover { background-color: #B45309; }
         """)
         self.btn_edit.clicked.connect(self.activar_edicion)
         self.btn_edit.setVisible(False)
+        header_card_layout.addWidget(self.btn_edit, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        detail_header_layout.addWidget(self.lbl_detail_title, stretch=1)
-        detail_header_layout.addWidget(self.btn_edit)
-        self.right_layout.addLayout(detail_header_layout)
+        self.right_layout.addWidget(header_card)
 
-        # Formulario de datos personales
+        # ── 2. Formulario de Datos Personales ──
         form_group = QGroupBox("Información Personal del Maestro")
+        form_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        form_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold; font-size: 12px; color: #1F2115;
+                border: 1px solid #E2E8F0; border-radius: 8px;
+                margin-top: 10px; padding-top: 14px; padding-bottom: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; subcontrol-position: top left;
+                padding: 0 8px; left: 10px; color: #2D3033;
+            }
+        """)
         form_layout = QFormLayout(form_group)
-        form_layout.setVerticalSpacing(10)
+        form_layout.setVerticalSpacing(8)
+        form_layout.setHorizontalSpacing(12)
 
         self.txt_nombre = QLineEdit()
         self.txt_nombre.setPlaceholderText("Ej: Pedro Soto")
@@ -198,63 +292,35 @@ class MaestrosTab(QWidget):
         form_layout.addRow("Estado Laboral:", self.combo_estado)
         self.right_layout.addWidget(form_group)
 
-        # Sección Foto Perfil
-        photo_group = QGroupBox("Fotografía del Maestro")
-        photo_layout = QHBoxLayout(photo_group)
-
-        self.lbl_photo_preview = QLabel("Sin Foto")
-        self.lbl_photo_preview.setFixedSize(100, 100)
-        self.lbl_photo_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.lbl_photo_preview.setStyleSheet("border: 1px dashed #94A3B8; border-radius: 50px; background: #F8FAFC; color: #2D3033; font-weight: bold;")
-
-        photo_inputs_layout = QVBoxLayout()
-
-        # URL (solo lectura visual — la BD almacena aquí la URL)
-        self.txt_foto_url = QLineEdit()
-        self.txt_foto_url.setPlaceholderText("URL de la foto (se llena automáticamente al subir)")
-        self.txt_foto_url.setReadOnly(True)
-        self.txt_foto_url.setStyleSheet("color: #64748B; background: #F1F5F9;")
-        self.txt_foto_url.textChanged.connect(self.actualizar_preview_foto)
-
-        # Botón para subir foto desde dispositivo
-        self.btn_upload_foto = QPushButton("📁  Seleccionar foto desde dispositivo")
-        self.btn_upload_foto.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_upload_foto.setStyleSheet("""
-            QPushButton {
-                background-color: #F0F9FF; color: #0369A1;
-                border: 1px solid #BAE6FD; border-radius: 5px;
-                padding: 6px 12px; font-weight: 600;
-            }
-            QPushButton:hover { background-color: #E0F2FE; }
-            QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; }
-        """)
-        self.btn_upload_foto.clicked.connect(self._seleccionar_foto)
-        self.btn_upload_foto.setEnabled(False)  # solo activo en modo edición
-
-        photo_inputs_layout.addWidget(QLabel("URL almacenada:"))
-        photo_inputs_layout.addWidget(self.txt_foto_url)
-        photo_inputs_layout.addWidget(self.btn_upload_foto)
-        photo_inputs_layout.addStretch()
-
-        photo_layout.addWidget(self.lbl_photo_preview)
-        photo_layout.addLayout(photo_inputs_layout)
-        self.right_layout.addWidget(photo_group)
-
-        # Asignación a Obra
+        # ── 3. Asignación a Obra ──
         asign_group = QGroupBox("Asignación de Obra Destino")
+        asign_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        asign_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold; font-size: 12px; color: #1F2115;
+                border: 1px solid #E2E8F0; border-radius: 8px;
+                margin-top: 10px; padding-top: 14px; padding-bottom: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; subcontrol-position: top left;
+                padding: 0 8px; left: 10px; color: #2D3033;
+            }
+        """)
         asign_layout = QFormLayout(asign_group)
+        asign_layout.setVerticalSpacing(8)
+        asign_layout.setHorizontalSpacing(12)
 
         self.combo_obra_asign = QComboBox()
         self.btn_asignar = QPushButton("Asignar a Obra")
         self.btn_asignar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_asignar.setStyleSheet("QPushButton { background-color: #F3A500; color: white; font-weight: 600; padding: 7px 14px; border-radius: 4px; } QPushButton:hover { background-color: #0369A1; }")
+        self.btn_asignar.setStyleSheet("QPushButton { background-color: #F3A500; color: white; font-weight: 600; padding: 7px 14px; border-radius: 4px; } QPushButton:hover { background-color: #D97706; }")
         self.btn_asignar.clicked.connect(self._asignar_maestro)
 
         asign_layout.addRow("Obra Destino:", self.combo_obra_asign)
         asign_layout.addRow("", self.btn_asignar)
         self.right_layout.addWidget(asign_group)
 
-        # Botones de Acción
+        # ── 4. Botones de Acción ──
         actions_layout = QHBoxLayout()
         self.btn_save = QPushButton("Guardar Cambios")
         self.btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -266,7 +332,7 @@ class MaestrosTab(QWidget):
         self.btn_cancel.setStyleSheet("background-color: #2D3033; color: white; border-radius: 6px; padding: 9px 16px; font-weight: 600;")
         self.btn_cancel.clicked.connect(self.cancelar_edicion)
 
-        self.btn_delete = QPushButton("️ Eliminar Maestro")
+        self.btn_delete = QPushButton("🗑️ Eliminar Maestro")
         self.btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_delete.setStyleSheet("QPushButton { color: #DC2626; border: 1px solid #DC2626; border-radius: 6px; padding: 8px 14px; background: transparent; font-weight: 600; } QPushButton:hover { background: #FEF2F2; }")
         self.btn_delete.clicked.connect(self.eliminar_maestro)
@@ -277,6 +343,7 @@ class MaestrosTab(QWidget):
         actions_layout.addWidget(self.btn_delete)
 
         self.right_layout.addLayout(actions_layout)
+        self.right_layout.addStretch()
 
         right_scroll.setWidget(right_container)
         splitter.addWidget(right_scroll)
@@ -302,7 +369,9 @@ class MaestrosTab(QWidget):
         self.combo_tipo.setEnabled(enabled)
         self.txt_telefono.setEnabled(enabled)
         self.combo_estado.setEnabled(enabled)
-        self.btn_upload_foto.setEnabled(enabled)
+        
+        self.btn_upload_foto.setVisible(enabled)
+        self.btn_remove_foto.setVisible(enabled and bool(self.current_foto_url))
 
         self.btn_save.setVisible(enabled)
         self.btn_cancel.setVisible(enabled)
@@ -318,19 +387,20 @@ class MaestrosTab(QWidget):
         self.table.clearSelection()
         self.limpiar_formulario()
         self.lbl_detail_title.setText("Crear Nuevo Maestro")
+        self.lbl_detail_sub.setText("Completar datos personales y cargo")
         self.set_editing_mode(True)
         self.txt_nombre.setFocus()
 
     def limpiar_formulario(self):
         self.current_maestro = None
+        self.current_foto_url = ""
         self.lbl_detail_title.setText("Seleccione o cree un Maestro")
+        self.lbl_detail_sub.setText("Personal Técnico de Faena")
 
         self.txt_nombre.clear()
         self.txt_rut.clear()
         self.txt_telefono.clear()
-        self.txt_foto_url.clear()
-        self.lbl_photo_preview.setText("Sin Foto")
-        self.lbl_photo_preview.setPixmap(QPixmap())
+        self.actualizar_preview_foto("")
 
         self.set_editing_mode(False)
 
@@ -428,11 +498,18 @@ class MaestrosTab(QWidget):
 
     def cargar_detalle_maestro(self, m):
         self.current_maestro = m
-        self.lbl_detail_title.setText(f"{m.get('nombre', '')}")
-        self.txt_nombre.setText(m.get("nombre", "") or "")
+        nombre = m.get('nombre', '') or "Sin Nombre"
+        cargo = ""
+        if isinstance(m.get("tipos_maestro"), dict):
+            cargo = m["tipos_maestro"].get("nombre", "")
+        estado = (m.get("estado") or "activo").capitalize()
+
+        self.lbl_detail_title.setText(nombre)
+        self.lbl_detail_sub.setText(f"{cargo} • {estado}" if cargo else f"Personal • {estado}")
+        self.txt_nombre.setText(nombre)
         self.txt_rut.setText(m.get("rut_dni", "") or "")
         self.txt_telefono.setText(m.get("telefono", "") or "")
-        self.txt_foto_url.setText(m.get("foto_url", "") or "")
+        self.current_foto_url = m.get("foto_perfil_url") or m.get("foto_url") or ""
 
         # Seleccionar cargo en combo
         tipo_id = m.get("tipo_maestro_id")
@@ -441,31 +518,94 @@ class MaestrosTab(QWidget):
             self.combo_tipo.setCurrentIndex(idx)
 
         # Seleccionar estado en combo
-        estado = (m.get("estado") or "activo").lower()
-        idx_est = self.combo_estado.findData(estado)
+        estado_val = (m.get("estado") or "activo").lower()
+        idx_est = self.combo_estado.findData(estado_val)
         if idx_est >= 0:
             self.combo_estado.setCurrentIndex(idx_est)
 
-        self.actualizar_preview_foto(m.get("foto_url", "") or "")
+        self.actualizar_preview_foto(self.current_foto_url)
         self.set_editing_mode(False)
 
     def actualizar_preview_foto(self, url):
-        url = url.strip()
+        url = (url or "").strip()
+        self.current_foto_url = url
         if not url:
             self.lbl_photo_preview.setText("Sin Foto")
             self.lbl_photo_preview.setPixmap(QPixmap())
+            self.btn_remove_foto.setVisible(False)
             return
+
+        self.btn_remove_foto.setVisible(self.is_editing)
         try:
             res = requests.get(url, timeout=3)
             if res.status_code == 200:
                 pix = QPixmap()
                 if pix.loadFromData(res.content):
-                    scaled = pix.scaled(self.lbl_photo_preview.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    self.lbl_photo_preview.setPixmap(scaled)
+                    scaled = pix.scaled(
+                        self.lbl_photo_preview.size(),
+                        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    # Recorte circular
+                    target = QPixmap(self.lbl_photo_preview.size())
+                    target.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(target)
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    path = QPainterPath()
+                    path.addEllipse(0, 0, self.lbl_photo_preview.width(), self.lbl_photo_preview.height())
+                    painter.setClipPath(path)
+                    x = (self.lbl_photo_preview.width() - scaled.width()) // 2
+                    y = (self.lbl_photo_preview.height() - scaled.height()) // 2
+                    painter.drawPixmap(x, y, scaled)
+                    painter.end()
+                    self.lbl_photo_preview.setText("")
+                    self.lbl_photo_preview.setPixmap(target)
                     return
         except Exception:
             pass
-        self.lbl_photo_preview.setText("Foto URL")
+        self.lbl_photo_preview.setText("Foto")
+
+    # --- FOTO DEL MAESTRO: subida y eliminación ---
+
+    def _quitar_foto(self):
+        self.current_foto_url = ""
+        self.actualizar_preview_foto("")
+
+    def _seleccionar_foto(self):
+        """Abre el selector de archivos y sube la foto seleccionada al Storage."""
+        if not self.supabase_client:
+            QMessageBox.warning(self, "Error", "Sin conexión a Supabase.")
+            return
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar foto del maestro",
+            "",
+            "Imágenes (*.jpg *.jpeg *.png *.webp)"
+        )
+        if not file_path:
+            return
+
+        self.btn_upload_foto.setEnabled(False)
+        self.btn_upload_foto.setText("⏳ Subiendo...")
+
+        self._w_upload = UploadFotoPerfilWorker(
+            self.supabase_client, file_path, subfolder="personal"
+        )
+        self._w_upload.success.connect(self._on_foto_subida)
+        self._w_upload.error.connect(self._on_foto_error)
+        self._w_upload.start()
+
+    def _on_foto_subida(self, url: str):
+        self.btn_upload_foto.setEnabled(True)
+        self.btn_upload_foto.setText("📷 Cambiar Foto")
+        self.current_foto_url = url
+        self.actualizar_preview_foto(url)
+
+    def _on_foto_error(self, err: str):
+        self.btn_upload_foto.setEnabled(True)
+        self.btn_upload_foto.setText("📷 Cambiar Foto")
+        QMessageBox.critical(self, "Error al subir foto", err)
 
     def cargar_obras_combo(self):
         if not self.supabase_client:
@@ -500,7 +640,7 @@ class MaestrosTab(QWidget):
         tipo_id = self.combo_tipo.currentData()
         telefono = self.txt_telefono.text().strip()
         estado = self.combo_estado.currentData()
-        foto_url = self.txt_foto_url.text().strip()
+        foto_url = self.current_foto_url.strip()
 
         if not nombre or not tipo_id:
             QMessageBox.warning(self, "Error", "Nombre y Cargo son obligatorios.")

@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel,
     QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QSplitter, QTextEdit, QFrame, QGraphicsDropShadowEffect,
-    QScrollArea, QMessageBox, QPushButton
+    QScrollArea, QMessageBox, QPushButton, QProgressBar, QFormLayout, QGroupBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QThread
 from PyQt6.QtGui import QColor, QPixmap, QImage, QIcon
@@ -62,7 +62,10 @@ class AvancesContent(QWidget):
         self.items = []
         self.avances = []
         self.filtered_avances = []
+        self.filtered_items = []
+        self.current_selected_item = None
         self.downloader = None
+        self.item_adv_downloader = None
         self.chart_style = "agrupado"  # 'agrupado' or 'apilado'
 
         self.setup_ui()
@@ -180,6 +183,7 @@ class AvancesContent(QWidget):
         """)
 
         self.tab_stats = QWidget()
+        self.tab_items = QWidget()
         self.tab_table = QWidget()
         self.tab_reportes = None
         self.tab_edp = None
@@ -188,32 +192,601 @@ class AvancesContent(QWidget):
         self.tab_edp_dummy = QWidget()
 
         self.setup_tab_stats()
+        self.setup_tab_items()
         self.setup_tab_table()
 
         self.tabs.addTab(self.tab_stats, "Gráficos y Estadísticas")
+        self.tabs.addTab(self.tab_items, "Ítems de Obra")
         self.tabs.addTab(self.tab_table, "Detalle de Avances")
         self.tabs.addTab(self.tab_reportes_dummy, "Reportes y Consumo")
         self.tabs.addTab(self.tab_edp_dummy, "Estados de Pago")
 
         self.tabs.currentChanged.connect(self._on_tab_changed)
-
         self.main_layout.addWidget(self.tabs)
 
     def _on_tab_changed(self, index):
-        if index == 2 and self.tab_reportes is None:
+        if index == 3 and self.tab_reportes is None:
             self.tab_reportes = ReportesContent(supabase_client=self.supabase, fixed_obra_id=self.obra_data.get('id'))
-            self.tabs.removeTab(2)
-            self.tabs.insertTab(2, self.tab_reportes, "Reportes y Consumo")
-            self.tabs.setCurrentIndex(2)
-        elif index == 3 and self.tab_edp is None:
+            self.tabs.removeTab(3)
+            self.tabs.insertTab(3, self.tab_reportes, "Reportes y Consumo")
+            self.tabs.setCurrentIndex(3)
+        elif index == 4 and self.tab_edp is None:
             self.tab_edp = EDPTab(
                 supabase_client=self.supabase,
                 obra_id=self.obra_data.get('id'),
                 user_id=self.user_id
             )
-            self.tabs.removeTab(3)
-            self.tabs.insertTab(3, self.tab_edp, "Estados de Pago")
-            self.tabs.setCurrentIndex(3)
+            self.tabs.removeTab(4)
+            self.tabs.insertTab(4, self.tab_edp, "Estados de Pago")
+            self.tabs.setCurrentIndex(4)
+
+    def setup_tab_items(self):
+        tab_layout = QVBoxLayout(self.tab_items)
+        tab_layout.setContentsMargins(10, 10, 10, 10)
+        tab_layout.setSpacing(8)
+
+        # ── Splitter Horizontal: Tabla con Filtros (Izquierda) / Detalle y Avances (Derecha) ──
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setStyleSheet("QSplitter::handle { background-color: #E2E8F0; width: 2px; }")
+
+        # 1. Panel Izquierdo: Barra de Filtros + Tabla de Ítems
+        table_container = QWidget()
+        table_vbox = QVBoxLayout(table_container)
+        table_vbox.setContentsMargins(0, 0, 8, 0)
+        table_vbox.setSpacing(8)
+
+        # Barra de Filtros compacta encima de la tabla
+        filters_widget = QWidget()
+        filters_layout = QHBoxLayout(filters_widget)
+        filters_layout.setContentsMargins(0, 0, 0, 0)
+        filters_layout.setSpacing(8)
+
+        self.items_search_input = QLineEdit()
+        self.items_search_input.setPlaceholderText("🔍 Buscar por ubicación, plano, estructura, material, perfil...")
+        self.items_search_input.textChanged.connect(self.aplicar_filtros_items)
+        self.items_search_input.setStyleSheet("padding: 6px 10px; font-size: 12px; height: 30px;")
+        filters_layout.addWidget(self.items_search_input, stretch=3)
+
+        self.combo_filter_items_ubicacion = QComboBox()
+        self.combo_filter_items_ubicacion.addItem("Todas las Ubicaciones")
+        self.combo_filter_items_ubicacion.currentIndexChanged.connect(self.aplicar_filtros_items)
+        self.combo_filter_items_ubicacion.setStyleSheet("padding: 4px 8px; font-size: 12px; height: 30px;")
+        filters_layout.addWidget(self.combo_filter_items_ubicacion, stretch=2)
+
+        self.combo_filter_items_status = QComboBox()
+        self.combo_filter_items_status.addItems([
+            "Todos los Estados",
+            "Completados (100%)",
+            "En Progreso (1-99%)",
+            "Sin Iniciar (0%)",
+            "Excedidos (>100%)"
+        ])
+        self.combo_filter_items_status.currentIndexChanged.connect(self.aplicar_filtros_items)
+        self.combo_filter_items_status.setStyleSheet("padding: 4px 8px; font-size: 12px; height: 30px;")
+        filters_layout.addWidget(self.combo_filter_items_status, stretch=2)
+
+        self.lbl_items_counter = QLabel("0 ítems")
+        self.lbl_items_counter.setStyleSheet("font-size: 12px; font-weight: bold; color: #4A5156; padding-left: 4px;")
+        filters_layout.addWidget(self.lbl_items_counter)
+
+        table_vbox.addWidget(filters_widget)
+
+        # Tabla de Ítems
+        self.table_items = QTableWidget()
+        self.table_items.verticalHeader().setDefaultSectionSize(38)
+        self.table_items.verticalHeader().setVisible(False)
+        self.table_items.horizontalHeader().setMinimumSectionSize(80)
+        self.table_items.setColumnCount(10)
+        self.table_items.setHorizontalHeaderLabels([
+            "#", "Ubicación", "Plano", "Estructura", "Material",
+            "Contrato (m²)", "Aprobado (m²)", "Pendiente (m²)", "Progreso", "Estado"
+        ])
+        self.table_items.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.table_items.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # #
+        self.table_items.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)      # Ubicacion
+        self.table_items.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents) # Plano
+        self.table_items.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)      # Estructura
+        self.table_items.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)          # Material
+        self.table_items.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents) # Contrato
+        self.table_items.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents) # Aprobado
+        self.table_items.horizontalHeader().setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents) # Pendiente
+        self.table_items.horizontalHeader().setSectionResizeMode(8, QHeaderView.ResizeMode.ResizeToContents) # Progreso
+        self.table_items.horizontalHeader().setSectionResizeMode(9, QHeaderView.ResizeMode.ResizeToContents) # Estado
+        self.table_items.setAlternatingRowColors(True)
+        self.table_items.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table_items.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table_items.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table_items.itemSelectionChanged.connect(self.on_item_row_selected)
+
+        table_vbox.addWidget(self.table_items)
+        splitter.addWidget(table_container)
+
+        # 2. Panel Lateral Derecho: Detalle del Ítem y Lista de Avances
+        right_scroll = QScrollArea()
+        right_scroll.setWidgetResizable(True)
+        right_scroll.setMinimumWidth(340)
+        right_scroll.setMaximumWidth(460)
+        right_scroll.setStyleSheet("QScrollArea { background-color: #F8FAFC; color: #1F2115; border: 1px solid #E2E8F0; border-radius: 8px; }")
+
+        right_container = QWidget()
+        right_container.setStyleSheet("background-color: #F8FAFC;")
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(12, 12, 12, 12)
+        right_layout.setSpacing(10)
+
+        # Encabezado del Ítem
+        item_header_frame = QFrame()
+        item_header_frame.setStyleSheet("background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;")
+        item_header_layout = QVBoxLayout(item_header_frame)
+        item_header_layout.setContentsMargins(10, 8, 10, 8)
+        item_header_layout.setSpacing(3)
+
+        self.lbl_item_detail_title = QLabel("Seleccione un Ítem")
+        self.lbl_item_detail_title.setStyleSheet("font-size: 15px; font-weight: 800; color: #1F2115; font-family: 'Montserrat', sans-serif;")
+        self.lbl_item_detail_title.setWordWrap(True)
+
+        self.lbl_item_detail_sub = QLabel("Haga clic en una fila para ver sus cubicaciones y avances")
+        self.lbl_item_detail_sub.setStyleSheet("font-size: 11px; color: #64748B; font-weight: 500;")
+        self.lbl_item_detail_sub.setWordWrap(True)
+
+        item_header_layout.addWidget(self.lbl_item_detail_title)
+        item_header_layout.addWidget(self.lbl_item_detail_sub)
+        right_layout.addWidget(item_header_frame)
+
+        # Caja de Ficha Técnica del Ítem
+        self.item_tech_box = QFrame()
+        self.item_tech_box.setStyleSheet("background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;")
+        tech_layout = QFormLayout(self.item_tech_box)
+        tech_layout.setContentsMargins(10, 8, 10, 8)
+        tech_layout.setVerticalSpacing(5)
+        tech_layout.setHorizontalSpacing(10)
+
+        self.lbl_item_tech_perfil = QLabel("-")
+        self.lbl_item_tech_dim = QLabel("-")
+        self.lbl_item_tech_fuego = QLabel("-")
+        self.lbl_item_tech_micras = QLabel("-")
+        self.lbl_item_tech_precio = QLabel("-")
+        self.lbl_item_tech_total_val = QLabel("-")
+
+        for lbl in [self.lbl_item_tech_perfil, self.lbl_item_tech_dim, self.lbl_item_tech_fuego, self.lbl_item_tech_micras, self.lbl_item_tech_precio, self.lbl_item_tech_total_val]:
+            lbl.setStyleSheet("font-size: 11px; color: #1F2115; font-weight: 600;")
+
+        tech_layout.addRow("Perfil / Tipo:", self.lbl_item_tech_perfil)
+        tech_layout.addRow("Dimensión:", self.lbl_item_tech_dim)
+        tech_layout.addRow("Resistencia Fuego:", self.lbl_item_tech_fuego)
+        tech_layout.addRow("Espesor Teórico:", self.lbl_item_tech_micras)
+        tech_layout.addRow("Precio Contrato ($/m²):", self.lbl_item_tech_precio)
+        tech_layout.addRow("Monto Total Contrato:", self.lbl_item_tech_total_val)
+        right_layout.addWidget(self.item_tech_box)
+
+        # Barra de Progreso del Ítem
+        progress_card = QFrame()
+        progress_card.setStyleSheet("background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px;")
+        progress_card_layout = QVBoxLayout(progress_card)
+        progress_card_layout.setContentsMargins(10, 8, 10, 8)
+        progress_card_layout.setSpacing(5)
+
+        prog_head = QHBoxLayout()
+        prog_title = QLabel("Progreso de Ejecución")
+        prog_title.setStyleSheet("font-size: 12px; font-weight: bold; color: #2D3033;")
+        self.lbl_item_kpi_pct = QLabel("0.0%")
+        self.lbl_item_kpi_pct.setStyleSheet("font-size: 14px; font-weight: 800; color: #F3A500; font-family: 'Montserrat';")
+        prog_head.addWidget(prog_title)
+        prog_head.addStretch()
+        prog_head.addWidget(self.lbl_item_kpi_pct)
+        progress_card_layout.addLayout(prog_head)
+
+        self.item_progress_bar = QProgressBar()
+        self.item_progress_bar.setRange(0, 100)
+        self.item_progress_bar.setValue(0)
+        self.item_progress_bar.setFixedHeight(6)
+        self.item_progress_bar.setTextVisible(False)
+        self.item_progress_bar.setStyleSheet("""
+            QProgressBar { border: none; background-color: #E2E8F0; border-radius: 3px; }
+            QProgressBar::chunk { background-color: #10B981; border-radius: 3px; }
+        """)
+        progress_card_layout.addWidget(self.item_progress_bar)
+
+        kpis_row = QHBoxLayout()
+        self.lbl_item_kpi_contratado = QLabel("Contrato: 0 m²")
+        self.lbl_item_kpi_aprobado = QLabel("Aprobado: 0 m²")
+        self.lbl_item_kpi_pendiente = QLabel("Pendiente: 0 m²")
+        for k_lbl, col in [(self.lbl_item_kpi_contratado, "#2D3033"), (self.lbl_item_kpi_aprobado, "#10B981"), (self.lbl_item_kpi_pendiente, "#D97706")]:
+            k_lbl.setStyleSheet(f"font-size: 10px; font-weight: bold; color: {col};")
+            kpis_row.addWidget(k_lbl)
+        kpis_row.addStretch()
+        progress_card_layout.addLayout(kpis_row)
+
+        right_layout.addWidget(progress_card)
+
+        # Sección de Avances del Ítem
+        adv_group = QGroupBox("Avances Registrados de este Ítem")
+        adv_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold; font-size: 12px; color: #1F2115;
+                border: 1px solid #E2E8F0; border-radius: 8px;
+                margin-top: 8px; padding-top: 14px; padding-bottom: 6px;
+                background-color: #FFFFFF;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; subcontrol-position: top left;
+                padding: 0 8px; left: 10px; color: #2D3033;
+            }
+        """)
+        adv_layout = QVBoxLayout(adv_group)
+        adv_layout.setContentsMargins(6, 6, 6, 6)
+        adv_layout.setSpacing(6)
+
+        self.table_item_advances = QTableWidget()
+        self.table_item_advances.verticalHeader().setDefaultSectionSize(30)
+        self.table_item_advances.verticalHeader().setVisible(False)
+        self.table_item_advances.setColumnCount(5)
+        self.table_item_advances.setHorizontalHeaderLabels(["Fecha", "Supervisor", "m²", "Estado", "Evidencia"])
+        self.table_item_advances.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.table_item_advances.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        self.table_item_advances.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self.table_item_advances.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.table_item_advances.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        self.table_item_advances.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.table_item_advances.setAlternatingRowColors(True)
+        self.table_item_advances.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table_item_advances.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.table_item_advances.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table_item_advances.setMinimumHeight(130)
+        self.table_item_advances.itemSelectionChanged.connect(self.on_item_advance_selected)
+        adv_layout.addWidget(self.table_item_advances)
+
+        self.lbl_no_item_advances = QLabel("No hay avances registrados para este ítem.")
+        self.lbl_no_item_advances.setStyleSheet("color: #64748B; font-size: 11px; padding: 8px; font-style: italic;")
+        self.lbl_no_item_advances.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_no_item_advances.setVisible(False)
+        adv_layout.addWidget(self.lbl_no_item_advances)
+
+        # Caja de Vista Previa de Evidencia de Avance
+        self.item_adv_preview_box = QFrame()
+        self.item_adv_preview_box.setStyleSheet("background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px;")
+        prev_layout = QVBoxLayout(self.item_adv_preview_box)
+        prev_layout.setContentsMargins(6, 6, 6, 6)
+        prev_layout.setSpacing(4)
+
+        self.lbl_item_adv_comment = QLabel("Comentario: -")
+        self.lbl_item_adv_comment.setStyleSheet("font-size: 11px; color: #334155;")
+        self.lbl_item_adv_comment.setWordWrap(True)
+        prev_layout.addWidget(self.lbl_item_adv_comment)
+
+        self.lbl_item_adv_image = QLabel("Seleccione un avance arriba para ver la foto")
+        self.lbl_item_adv_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_item_adv_image.setFixedHeight(140)
+        self.lbl_item_adv_image.setStyleSheet("background-color: #E2E8F0; border-radius: 4px; color: #64748B; font-size: 10px;")
+        prev_layout.addWidget(self.lbl_item_adv_image)
+
+        adv_layout.addWidget(self.item_adv_preview_box)
+        right_layout.addWidget(adv_group)
+
+        right_layout.addStretch()
+
+        right_scroll.setWidget(right_container)
+        splitter.addWidget(right_scroll)
+
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([780, 360])
+        tab_layout.addWidget(splitter)
+
+    # ── MÉTODOS DE LA PESTAÑA ÍTEMS DE OBRA ──
+
+    def aplicar_filtros_items(self):
+        search = self.items_search_input.text().strip().lower()
+        ubicacion_filtro = self.combo_filter_items_ubicacion.currentText()
+        status_filtro = self.combo_filter_items_status.currentText()
+
+        self.filtered_items = []
+        for item in self.items:
+            ubicacion = str(item.get("ubicacion") or "").lower()
+            plano = str(item.get("plano") or "").lower()
+            estructura = str(item.get("estructura") or "").lower()
+            material = str(item.get("material") or "").lower()
+            perfil = str(item.get("perfil") or "").lower()
+            desc_plano = str(item.get("descripcion_plano") or "").lower()
+
+            # Texto libre
+            match_search = (
+                not search
+                or (search in ubicacion)
+                or (search in plano)
+                or (search in estructura)
+                or (search in material)
+                or (search in perfil)
+                or (search in desc_plano)
+            )
+            if not match_search:
+                continue
+
+            # Filtro Ubicación
+            if ubicacion_filtro != "Todas las Ubicaciones" and item.get("ubicacion") != ubicacion_filtro:
+                continue
+
+            # Cálculo de avance del ítem
+            item_id = item.get("id")
+            cant_contratada = float(item.get("area_expuesta_m2") or item.get("cantidad") or 0.0)
+            item_avances = [av for av in self.avances if av.get("item_obra_id") == item_id]
+            cant_aprobada = sum(float(av.get("cantidad") or 0.0) for av in item_avances if str(av.get("estado_revision") or "").lower() == "aprobado")
+            cant_pendiente = sum(float(av.get("cantidad") or 0.0) for av in item_avances if str(av.get("estado_revision") or "").lower() == "pendiente")
+            pct = (cant_aprobada / cant_contratada * 100.0) if cant_contratada > 0 else 0.0
+
+            # Filtro Estado
+            if status_filtro == "Completados (100%)" and (pct < 100.0 or pct > 100.05):
+                continue
+            elif status_filtro == "En Progreso (1-99%)" and (pct <= 0.0 or pct >= 100.0):
+                continue
+            elif status_filtro == "Sin Iniciar (0%)" and (pct > 0.0 or cant_pendiente > 0):
+                continue
+            elif status_filtro == "Excedidos (>100%)" and pct <= 100.05:
+                continue
+
+            self.filtered_items.append((item, cant_contratada, cant_aprobada, cant_pendiente, pct))
+
+        self.poblar_tabla_items()
+
+    def poblar_tabla_items(self):
+        self.table_items.blockSignals(True)
+        self.table_items.setRowCount(len(self.filtered_items))
+        self.lbl_items_counter.setText(f"{len(self.filtered_items)} de {len(self.items)} ítems")
+
+        for idx, (item, cant_contratada, cant_aprobada, cant_pendiente, pct) in enumerate(self.filtered_items):
+            # 0: #
+            it_num = QTableWidgetItem(str(idx + 1))
+            it_num.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            it_num.setData(Qt.ItemDataRole.UserRole, item)
+            self.table_items.setItem(idx, 0, it_num)
+
+            # 1: Ubicación
+            self.table_items.setItem(idx, 1, QTableWidgetItem(str(item.get("ubicacion") or "-")))
+            # 2: Plano
+            self.table_items.setItem(idx, 2, QTableWidgetItem(str(item.get("plano") or "-")))
+            # 3: Estructura
+            self.table_items.setItem(idx, 3, QTableWidgetItem(str(item.get("estructura") or "-")))
+            # 4: Material
+            self.table_items.setItem(idx, 4, QTableWidgetItem(str(item.get("material") or "-")))
+
+            # 5: Contrato m2
+            it_cont = QTableWidgetItem(f"{cant_contratada:,.2f}")
+            it_cont.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self.table_items.setItem(idx, 5, it_cont)
+
+            # 6: Aprobado m2
+            it_apr = QTableWidgetItem(f"{cant_aprobada:,.2f}")
+            it_apr.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            if cant_aprobada > 0:
+                it_apr.setForeground(QColor("#10B981"))
+            self.table_items.setItem(idx, 6, it_apr)
+
+            # 7: Pendiente m2
+            it_pend = QTableWidgetItem(f"{cant_pendiente:,.2f}")
+            it_pend.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            if cant_pendiente > 0:
+                it_pend.setForeground(QColor("#D97706"))
+            self.table_items.setItem(idx, 7, it_pend)
+
+            # 8: Progreso %
+            it_prog = QTableWidgetItem(f"{pct:.1f}%")
+            it_prog.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.table_items.setItem(idx, 8, it_prog)
+
+            # 9: Estado Badge
+            status_lbl = QLabel()
+            status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            if pct >= 100.0 and pct <= 100.05:
+                status_lbl.setText("Completado")
+                status_lbl.setStyleSheet("color: #047857; font-weight: bold; background-color: #D1FAE5; border-radius: 4px; font-size: 11px; padding: 2px;")
+            elif pct > 100.05:
+                status_lbl.setText("Excedido")
+                status_lbl.setStyleSheet("color: #1D4ED8; font-weight: bold; background-color: #DBEAFE; border-radius: 4px; font-size: 11px; padding: 2px;")
+            elif pct > 0:
+                status_lbl.setText("En Progreso")
+                status_lbl.setStyleSheet("color: #D97706; font-weight: bold; background-color: #FEF3C7; border-radius: 4px; font-size: 11px; padding: 2px;")
+            elif cant_pendiente > 0:
+                status_lbl.setText("En Revisión")
+                status_lbl.setStyleSheet("color: #9333EA; font-weight: bold; background-color: #F3E8FF; border-radius: 4px; font-size: 11px; padding: 2px;")
+            else:
+                status_lbl.setText("Sin Iniciar")
+                status_lbl.setStyleSheet("color: #64748B; font-weight: bold; background-color: #F1F5F9; border-radius: 4px; font-size: 11px; padding: 2px;")
+
+            self.table_items.setCellWidget(idx, 9, status_lbl)
+
+        self.table_items.blockSignals(False)
+
+        # Si hay filas, seleccionar la primera por defecto
+        if self.filtered_items:
+            self.table_items.selectRow(0)
+        else:
+            self.limpiar_detalle_item()
+
+    def on_item_row_selected(self):
+        ranges = self.table_items.selectedRanges()
+        if not ranges:
+            return
+        row = ranges[0].topRow()
+        if row < 0 or row >= len(self.filtered_items):
+            return
+
+        item_tuple = self.filtered_items[row]
+        item, cant_contratada, cant_aprobada, cant_pendiente, pct = item_tuple
+        self.mostrar_detalle_item(item, cant_contratada, cant_aprobada, cant_pendiente, pct)
+
+    def mostrar_detalle_item(self, item, cant_contratada, cant_aprobada, cant_pendiente, pct):
+        self.current_selected_item = item
+
+        est = item.get("estructura") or "Elemento"
+        ubic = item.get("ubicacion") or "Sin Ubicación"
+        plano = item.get("plano") or "-"
+        mat = item.get("material") or "-"
+
+        self.lbl_item_detail_title.setText(f"{est} • {ubic}")
+        self.lbl_item_detail_sub.setText(f"Plano: {plano} | Recubrimiento: {mat}")
+
+        self.lbl_item_tech_perfil.setText(str(item.get("perfil") or "-"))
+        self.lbl_item_tech_dim.setText(str(item.get("dimension") or "-"))
+        self.lbl_item_tech_fuego.setText(str(item.get("resist_fuego") or "-"))
+        self.lbl_item_tech_micras.setText(f"{item.get('micras')} µm" if item.get("micras") else "-")
+
+        pu = float(item.get("precio_unitario_contrato") or 0.0)
+        self.lbl_item_tech_precio.setText(f"$ {pu:,.0f}".replace(",", "."))
+        self.lbl_item_tech_total_val.setText(f"$ {pu * cant_contratada:,.0f}".replace(",", "."))
+
+        # KPIs y Barra de Progreso
+        self.lbl_item_kpi_pct.setText(f"{pct:.1f}%")
+        self.item_progress_bar.setValue(min(100, int(pct)))
+        if pct >= 100:
+            self.item_progress_bar.setStyleSheet("""
+                QProgressBar { border: none; background-color: #E2E8F0; border-radius: 4px; }
+                QProgressBar::chunk { background-color: #10B981; border-radius: 4px; }
+            """)
+        elif pct > 0:
+            self.item_progress_bar.setStyleSheet("""
+                QProgressBar { border: none; background-color: #E2E8F0; border-radius: 4px; }
+                QProgressBar::chunk { background-color: #F3A500; border-radius: 4px; }
+            """)
+        else:
+            self.item_progress_bar.setStyleSheet("""
+                QProgressBar { border: none; background-color: #E2E8F0; border-radius: 4px; }
+                QProgressBar::chunk { background-color: #94A3B8; border-radius: 4px; }
+            """)
+
+        self.lbl_item_kpi_contratado.setText(f"Contrato: {cant_contratada:,.2f} m²")
+        self.lbl_item_kpi_aprobado.setText(f"Aprobado: {cant_aprobada:,.2f} m²")
+        self.lbl_item_kpi_pendiente.setText(f"Pendiente: {cant_pendiente:,.2f} m²")
+
+        # Cargar avances del ítem
+        item_id = item.get("id")
+        item_avances = [av for av in self.avances if av.get("item_obra_id") == item_id]
+        item_avances = sorted(item_avances, key=lambda x: x.get("fecha_captura_local") or "", reverse=True)
+        self.current_item_avances = item_avances
+
+        self.table_item_advances.blockSignals(True)
+        self.table_item_advances.setRowCount(len(item_avances))
+
+        if not item_avances:
+            self.table_item_advances.setVisible(False)
+            self.lbl_no_item_advances.setVisible(True)
+            self.item_adv_preview_box.setVisible(False)
+        else:
+            self.table_item_advances.setVisible(True)
+            self.lbl_no_item_advances.setVisible(False)
+            self.item_adv_preview_box.setVisible(True)
+
+            for a_idx, av in enumerate(item_avances):
+                # Fecha
+                f_raw = (av.get("fecha_captura_local") or "").replace("T", " ")[:16]
+                it_f = QTableWidgetItem(f_raw)
+                it_f.setData(Qt.ItemDataRole.UserRole, av)
+                self.table_item_advances.setItem(a_idx, 0, it_f)
+
+                # Supervisor
+                self.table_item_advances.setItem(a_idx, 1, QTableWidgetItem(str(av.get("jefe_nombre") or "Desconocido")))
+
+                # Cantidad m2
+                q_av = float(av.get("cantidad") or 0.0)
+                it_q = QTableWidgetItem(f"{q_av:,.2f}")
+                it_q.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self.table_item_advances.setItem(a_idx, 2, it_q)
+
+                # Estado Badge
+                st_av = str(av.get("estado_revision") or "pendiente").capitalize()
+                st_lbl = QLabel(st_av)
+                st_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                if st_av.lower() == "aprobado":
+                    st_lbl.setStyleSheet("color: #047857; font-weight: bold; background-color: #D1FAE5; border-radius: 3px; font-size: 10px; padding: 1px;")
+                elif st_av.lower() == "pendiente":
+                    st_lbl.setStyleSheet("color: #D97706; font-weight: bold; background-color: #FEF3C7; border-radius: 3px; font-size: 10px; padding: 1px;")
+                else:
+                    st_lbl.setStyleSheet("color: #DC2626; font-weight: bold; background-color: #FEE2E2; border-radius: 3px; font-size: 10px; padding: 1px;")
+                self.table_item_advances.setCellWidget(a_idx, 3, st_lbl)
+
+                # Evidencia / Foto
+                has_foto = bool(av.get("foto_url"))
+                btn_foto = QPushButton("📷 Foto" if has_foto else "Sin foto")
+                btn_foto.setEnabled(has_foto)
+                btn_foto.setStyleSheet("""
+                    QPushButton { background-color: #FFFFFF; color: #0369A1; border: 1px solid #BAE6FD; border-radius: 3px; font-size: 11px; padding: 2px 6px; }
+                    QPushButton:hover { background-color: #E0F2FE; }
+                    QPushButton:disabled { color: #94A3B8; border-color: #E2E8F0; background: #F8FAFC; }
+                """)
+                if has_foto:
+                    btn_foto.setCursor(Qt.CursorShape.PointingHandCursor)
+                    btn_foto.clicked.connect(lambda ch, a=av: self.on_item_advance_foto_clicked(a))
+                self.table_item_advances.setCellWidget(a_idx, 4, btn_foto)
+
+            self.table_item_advances.selectRow(0)
+
+        self.table_item_advances.blockSignals(False)
+
+    def on_item_advance_selected(self):
+        ranges = self.table_item_advances.selectedRanges()
+        if not ranges or not hasattr(self, 'current_item_avances'):
+            return
+        row = ranges[0].topRow()
+        if row < 0 or row >= len(self.current_item_avances):
+            return
+
+        av = self.current_item_avances[row]
+        com = av.get("comentario") or "Sin comentario registrado."
+        self.lbl_item_adv_comment.setText(f"<b>Comentario:</b> {com}")
+
+        foto_url = av.get("foto_url")
+        if foto_url:
+            self.lbl_item_adv_image.setText("Cargando evidencia...")
+            self.item_adv_downloader = ImageDownloader(foto_url)
+            self.item_adv_downloader.finished.connect(self._on_item_adv_image_loaded)
+            self.item_adv_downloader.error.connect(lambda e: self.lbl_item_adv_image.setText("No se pudo cargar la imagen"))
+            self.item_adv_downloader.start()
+        else:
+            self.lbl_item_adv_image.setPixmap(QPixmap())
+            self.lbl_item_adv_image.setText("Sin foto adjunta")
+
+    def _on_item_adv_image_loaded(self, data):
+        try:
+            image = QImage()
+            if image.loadFromData(data):
+                pix = QPixmap.fromImage(image)
+                scaled = pix.scaled(
+                    self.lbl_item_adv_image.width(),
+                    self.lbl_item_adv_image.height(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self.lbl_item_adv_image.setPixmap(scaled)
+            else:
+                self.lbl_item_adv_image.setText("Error al procesar foto")
+        except Exception:
+            self.lbl_item_adv_image.setText("Error al renderizar foto")
+
+    def on_item_advance_foto_clicked(self, avance):
+        foto_url = avance.get("foto_url")
+        if not foto_url:
+            return
+        from src.ui.document_viewer import DocumentViewerDialog
+        dlg = DocumentViewerDialog(self, url_or_path=foto_url, title="Evidencia Fotográfica de Avance")
+        dlg.exec()
+
+    def limpiar_detalle_item(self):
+        self.lbl_item_detail_title.setText("Seleccione un Ítem")
+        self.lbl_item_detail_sub.setText("Haga clic en una fila para ver sus cubicaciones y avances")
+        self.lbl_item_tech_perfil.setText("-")
+        self.lbl_item_tech_dim.setText("-")
+        self.lbl_item_tech_fuego.setText("-")
+        self.lbl_item_tech_micras.setText("-")
+        self.lbl_item_tech_precio.setText("-")
+        self.lbl_item_tech_total_val.setText("-")
+        self.item_progress_bar.setValue(0)
+        self.lbl_item_kpi_pct.setText("0.0%")
+        self.lbl_item_kpi_contratado.setText("Contrato: 0 m²")
+        self.lbl_item_kpi_aprobado.setText("Aprobado: 0 m²")
+        self.lbl_item_kpi_pendiente.setText("Pendiente: 0 m²")
+        self.table_item_advances.setRowCount(0)
+        self.table_item_advances.setVisible(False)
+        self.lbl_no_item_advances.setVisible(True)
+        self.item_adv_preview_box.setVisible(False)
 
     def setup_tab_stats(self):
         stats_layout = QVBoxLayout(self.tab_stats)
@@ -578,8 +1151,17 @@ class AvancesContent(QWidget):
             self.combo_filter_jefe.addItems(jefes_names)
             self.combo_filter_jefe.blockSignals(False)
 
+            # Populate location filter combo in items tab
+            locations = sorted(list(set(str(it.get("ubicacion") or "").strip() for it in self.items if it.get("ubicacion"))))
+            self.combo_filter_items_ubicacion.blockSignals(True)
+            self.combo_filter_items_ubicacion.clear()
+            self.combo_filter_items_ubicacion.addItem("Todas las Ubicaciones")
+            self.combo_filter_items_ubicacion.addItems(locations)
+            self.combo_filter_items_ubicacion.blockSignals(False)
+
             # Apply initial filtering
             self.aplicar_filtros()
+            self.aplicar_filtros_items()
 
             # Update stats
             self.calcular_estadisticas()
@@ -1071,6 +1653,7 @@ class AvancesContent(QWidget):
                 av["estado_revision"] = nuevo_estado
 
         self.aplicar_filtros()
+        self.aplicar_filtros_items()
         self.btn_aprobar_avance.setText("Avance Aprobado")
         self.btn_aprobar_avance.setEnabled(False)
         self.btn_aprobar_avance.setStyleSheet(
@@ -1123,6 +1706,7 @@ class AvancesContent(QWidget):
         self.btn_aprobar_todos.setText("Aprobar Todos")
 
         self.aplicar_filtros()
+        self.aplicar_filtros_items()
 
         # Refrescar el tab EDP para que los KPIs reflejen los nuevos avances aprobados
         if hasattr(self, 'tab_edp') and self.tab_edp is not None:

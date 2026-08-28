@@ -3,7 +3,7 @@
 **Organización**: Accuratek  
 **Fecha de Actualización**: Agosto 2026  
 **Módulo**: Suite de Escritorio Administrativa y Financiera (`accuraop_gerencia`)  
-**Versión de Producción**: 1.0.4 (Canal Oficial de Actualizaciones: [GitHub Releases `pancholavinf/trabs-gerencia`](https://github.com/pancholavinf/trabs-gerencia/releases))  
+**Versión de Producción**: 1.0.5 (Canal Oficial de Actualizaciones: [GitHub Releases `pancholavinf/trabs-gerencia`](https://github.com/pancholavinf/trabs-gerencia/releases))  
 **Documento**: Guía Técnica Integral de Arquitectura, Concurrencia, Controladores, Módulos UI, Auto-Login y Pipeline de Auto-Actualizaciones
 
 ---
@@ -34,6 +34,7 @@ accuraop_gerencia/
 ├── publish_release.py               # Script de publicación automatizada CLI hacia GitHub Releases
 ├── COMPILAR_APP.bat                 # Lanzador bat para compilar el .exe con un solo clic
 ├── PUBLICAR_VERSION.bat             # Lanzador bat para publicar nuevas versiones a GitHub Releases
+├── PUBLICAR_v1.0.5.bat              # Script bat directo de publicación rápida para v1.0.5
 ├── gerencia.spec                    # Archivo de configuración técnica de empaquetado PyInstaller
 ├── TrabsGerencia_Setup.iss          # Script de compilación de instalador oficial para Inno Setup
 ├── version.json                     # Manifiesto local de control de versiones
@@ -52,7 +53,8 @@ accuraop_gerencia/
 ├── dist_installer/                  # Binarios de distribución final compilados
 │   ├── TrabsGerencia_Setup_v1.0.2.exe # Instalador de producción v1.0.2
 │   ├── TrabsGerencia_Setup_v1.0.3.exe # Instalador de producción v1.0.3
-│   └── TrabsGerencia_Setup_v1.0.4.exe # Instalador de producción v1.0.4
+│   ├── TrabsGerencia_Setup_v1.0.4.exe # Instalador de producción v1.0.4
+│   └── TrabsGerencia_Setup_v1.0.5.exe # Instalador de producción v1.0.5
 ├── documentos_edp/                  # Directorio local de respaldo para PDFs de Estados de Pago generados
 └── src/
     ├── version.py                   # Fuente centralizada de versión y endpoint de GitHub Releases
@@ -62,7 +64,7 @@ accuraop_gerencia/
     │   ├── edp_controller.py        # Controlador de Estados de Pago (EDPController): cálculos, folios y congelamiento
     │   ├── jefes_controller.py      # Controlador CRUD para la administración de Supervisores de Obra
     │   ├── updater.py               # Motor asíncrono de Auto-Updates (CheckUpdateWorker, DownloadUpdateWorker e instalador)
-    │   └── workers.py               # Colección de 35 hilos asíncronos (QThread) para el patrón Zero-Freeze
+    │   └── workers.py               # Colección de 37 hilos asíncronos (QThread) para el patrón Zero-Freeze
     ├── ui/
     │   ├── style.qss                # Hoja de estilos Qt oficial (Design System Trabs 2026 + Tooltips oscuros)
     │   ├── login_screen.py          # Pantalla de login con precarga de correo y pie institucional
@@ -70,7 +72,7 @@ accuraop_gerencia/
     │   ├── dashboard_view.py        # Dashboard general: KPIs, widget Asistencia Hoy y cuadrícula de obras
     │   ├── ingesta_view.py          # Vista asistida de importación y mapeo de planillas Excel de cubicación
     │   ├── jefes_view.py            # Vista modal/pestaña para gestión y asignación de Supervisores de Obra
-    │   ├── avances_window.py        # Sub-vista de obra embebida (AvancesContent) con 4 pestañas operativas
+    │   ├── avances_window.py        # Sub-vista de obra embebida (AvancesContent) con 5 pestañas operativas (incluye Ítems de Obra)
     │   ├── control_personal_view.py # Vista de administración de cargos (tipos_maestro), maestros y asignación a faenas
     │   ├── reportes_asistencia_view.py # Vista de auditoría e historial de asistencia diaria con visor de fotos
     │   ├── materiales_view.py       # Catálogo maestro de insumos, unidades y rendimientos teóricos
@@ -193,21 +195,29 @@ La aplicación implementa un flujo de autenticación persistente respaldado por 
 * **Bulk Insert Transaccional**: Inserta los registros en `items_obra` y almacena la planilla original en el bucket `archivos_obras`.
 
 ### 6.4 Control y Auditoría de Obra (`avances_window.py` - `AvancesContent`)
-Módulo centralizado con 4 pestañas operativas:
-1. **Partidas y Avance Físico**:
-   * Visualización matricial de cubicaciones por piso, sector y elemento.
-   * Gráficos analíticos embebidos de **Matplotlib** (Curvas de avance, barras de rendimiento y avance por partida).
-2. **Auditoría de Evidencias**:
+Módulo centralizado con **5 pestañas operativas**:
+1. **Gráficos y Estadísticas**:
+   * Curvas de avance físico, gráficos de barras de rendimiento por elemento/partida e indicadores de m² ejecutados.
+   * Gráficos analíticos embebidos de **Matplotlib** (`FigureCanvasQTAgg`).
+2. **Ítems de Obra (Nueva en v1.0.5)**:
+   * **Buscador y Filtros en Vivo**: Filtro de texto instantáneo (por plano, ubicación, estructura, perfil o material), selector de ubicación y filtro por estado (*Todos, Completados 100%, En Progreso 1-99%, Sin Iniciar 0%, Excedidos >100%*).
+   * **Tabla Matricial de Cubicaciones**: Visualización de `#`, `Ubicación`, `Plano`, `Estructura`, `Material`, `Contrato (m²)`, `Aprobado (m²)`, `Pendiente (m²)`, `Progreso (%)` y badge de `Estado`.
+   * **Panel Lateral Interactivo Sincronizado**:
+     * *Ficha Técnica*: Perfil, dimensión, resistencia al fuego, micras teóricas, precio unitario de contrato ($/m²) y monto total contratado.
+     * *Progreso Gráfico*: Barra de progreso estilizada y desglose de m² contratados, aprobados y pendientes.
+     * *Historial de Avances del Ítem*: Sub-tabla con los avances reportados para el ítem seleccionado, fecha, supervisor responsable, m² reportados, estado y visor de comentario + foto de evidencia fotográfica.
+3. **Detalle de Avances (Auditoría de Evidencias)**:
    * Galería de fotos capturadas en terreno con metadatos de supervisor, fecha/hora y coordenadas.
    * Acciones de aprobación o rechazo de avances con actualización en tiempo real del estado de cobro.
-3. **Estados de Pago (EDP) (`edp_tab.py`)**:
+4. **Reportes y Consumo (Bitácora de Campo)**:
+   * Libro digital de novedades, incidentes y observaciones registradas por los supervisores móviles (`reportes_view.py`).
+   * Módulo de respuesta formal de gerencia con trazabilidad completa.
+5. **Estados de Pago (EDP) (`edp_tab.py`)**:
    * Historial de Estados de Pago emitidos con folios correlativos oficiales (`EDP-001`, `EDP-002`, etc.).
    * Generación y descarga de reportes oficiales en PDF (vía ReportLab) y planillas Excel de respaldo.
-4. **Bitácora de Campo (`reportes_view.py`)**:
-   * Libro digital de novedades, incidentes y observaciones registradas por los supervisores móviles.
-   * Módulo de respuesta formal de gerencia con trazabilidad completa.
 
 ### 6.5 Control de Personal y Nómina (`control_personal_view.py`)
+* **Encabezado de Perfil Ultra Compacto (`MaestroHeaderCard`)**: Tarjeta superior con avatar circular (48×48 px) con recorte antialiasing, nombre, especialidad, selector de foto local hacia `accuratek-data/personal/`, botón para quitar foto y edición protegida con contención vertical fija (`QSizePolicy.Fixed`).
 * **Gestión de Cargos (`tipos_maestro`)**: CRUD completo de especialidades (Maestro Mayor, Enfierrador, Pintor, Jornal, etc.) y sus tarifas diarias base.
 * **Catálogo de Maestros**: Ficha de trabajadores con RUT, nombre, cargo, foto de perfil y estado de vigencia.
 * **Asignación a Faenas**: Vinculación matricial de cuadrillas a obras específicas (`obras_maestros`).
@@ -223,6 +233,24 @@ Módulo centralizado con 4 pestañas operativas:
 ### 6.8 Visor Integrado de Documentos (`document_viewer.py`)
 * Visor nativo de documentos técnicos, planos y PDFs de respaldo sin necesidad de abrir aplicaciones externas.
 
+### 6.9 Gestión y Asignación de Supervisores (`jefes_view.py` & `jefes_controller.py`)
+* **Encabezado de Perfil Ultra Compacto (`ProfileHeaderCard`)**:
+  * Avatar circular de 48×48 px con antialiasing.
+  * Título de supervisor, correo electrónico institucional y botón directo para activar edición.
+  * Botones contextuales `"📷 Cambiar"` y `"✕ Quitar"` para gestión de foto directa en Supabase Storage.
+  * Políticas de tamaño `QSizePolicy.Fixed` y `addStretch()` que impiden que el contenedor gris se estire verticalmente en pantallas de alta resolución.
+* **Panel Dividido (*Splitter*)**:
+  * **Izquierda**: Barra de búsqueda predictiva en tiempo real (por nombre, email, teléfono o rol) y tabla de supervisores con indicador de foto de perfil y mapeo resiliente de roles a "Supervisor".
+  * **Derecha**: Tarjeta de detalle interactiva con formulario de lectura/edición de datos básicos (Nombre, RUT/DNI, Email, Contraseña, Teléfono, Rol).
+* **Flujo Seguro de Creación con Aislamiento de Sesión (`CreateJefeWorker`)**:
+  * Instancia un cliente temporal de Supabase (`create_client(str(url), str(key))`) para ejecutar `auth.sign_up(...)`, garantizando que el auto-login de Supabase **no altere ni secuestre la sesión del administrador en la aplicación de escritorio**.
+  * Persiste de forma transaccional el `id`, `nombre`, `email`, `rol = 'jefe_obra'`, `rut_dni`, `telefono` y `foto_perfil_url` en `perfiles_usuario`.
+  * Invalida automáticamente la caché en memoria de `DataManager`.
+* **Consultas Tolerantes y Resilientes (`DataManager.get_jefes`)**:
+  * Excluye únicamente administradores explícitos, garantizando que variaciones de mayúsculas o espacios en blanco no oculten supervisores en ninguna pantalla o reporte.
+* **Asignación Matricial a Faenas (`AssignJefeWorker`)**:
+  * Vinculación directa e instantánea de supervisores a obras activas mediante `obras_jefes_obra`.
+
 ---
 
 ## 🚀 7. Pipeline de Compilación y Distribución
@@ -236,10 +264,12 @@ Para compilar la aplicación y generar los paquetes de distribución:
 Genera la carpeta `accuraop_gerencia/dist/TrabsGerencia/` con el binario `TrabsGerencia.exe` (17.7 MB) autocontenido.
 
 ### 2. Generación del Instalador Oficial (Inno Setup)
-Compila `accuraop_gerencia/TrabsGerencia_Setup.iss` generando `dist_installer/TrabsGerencia_Setup_v1.0.4.exe` (~55 MB) con compresión sólida `LZMA2 Ultra`.
+Compila `accuraop_gerencia/TrabsGerencia_Setup.iss` generando `dist_installer/TrabsGerencia_Setup_v1.0.5.exe` (~55 MB) con compresión sólida `LZMA2 Ultra`.
 
 ### 3. Publicación de Nuevas Versiones
 ```powershell
-.\PUBLICAR_VERSION.bat --version 1.0.4 --notes "• Novedades de la versión..."
+.\PUBLICAR_v1.0.5.bat
+# o con parámetros personalizados:
+.\PUBLICAR_VERSION.bat --version 1.0.5 --notes "• Novedades de la versión..."
 ```
-O simplemente subiendo el archivo `dist_installer/TrabsGerencia_Setup_v1.0.4.exe` a la sección de **Releases** en GitHub.
+O simplemente subiendo el archivo `dist_installer/TrabsGerencia_Setup_v1.0.5.exe` a la sección de **Releases** en GitHub.
