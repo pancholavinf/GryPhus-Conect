@@ -102,9 +102,17 @@ def upload_release_to_github(tag: str, release_title: str, release_notes: str, i
         print("Error: No se obtuvo URL de subida de assets desde GitHub.")
         return False
 
-    # 2. Subir el archivo instalador .exe
-    clean_upload_url = upload_url_template.split("{")[0]
+    # 2. Subir el archivo instalador .exe (eliminando el anterior si ya existía en este release)
     filename = os.path.basename(installer_path)
+    for existing_asset in release_data.get("assets", []):
+        if existing_asset.get("name") == filename:
+            asset_id = existing_asset.get("id")
+            del_url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/assets/{asset_id}"
+            print(f"Reemplazando archivo anterior {filename} (ID: {asset_id})...")
+            requests.delete(del_url, headers=headers)
+            break
+
+    clean_upload_url = upload_url_template.split("{")[0]
     upload_url = f"{clean_upload_url}?name={filename}"
 
     file_size = os.path.getsize(installer_path)
