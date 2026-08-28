@@ -81,6 +81,11 @@ class LoginScreen(QWidget):
         self.login_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.login_btn.clicked.connect(self.handle_login)
         
+        from src.version import __version__
+        footer_ver = QLabel(f"Trabs Gerencia v{__version__} • Accuratek")
+        footer_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer_ver.setStyleSheet("font-size: 11px; color: #94A3B8; padding-top: 10px;")
+
         layout.addWidget(title)
         layout.addWidget(subtitle)
         layout.addSpacing(10)
@@ -89,6 +94,7 @@ class LoginScreen(QWidget):
         layout.addWidget(self.error_label)
         layout.addSpacing(10)
         layout.addWidget(self.login_btn)
+        layout.addWidget(footer_ver)
         
         main_layout.addWidget(container)
         if saved_email:

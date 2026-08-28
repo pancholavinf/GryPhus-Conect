@@ -2,7 +2,7 @@
 ; Requiere Inno Setup 6 (https://jrsoftware.org/isdl.php)
 
 #define MyAppName "Trabs Gerencia"
-#define MyAppVersion "1.0.3"
+#define MyAppVersion "1.0.4"
 #define MyAppPublisher "Accuratek - Trabs - Francisco lavin"
 #define MyAppURL "https://accuratek.cl"
 #define MyAppExeName "TrabsGerencia.exe"

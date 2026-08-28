@@ -3,7 +3,7 @@ Módulo de versión centralizado para Trabs Gerencia.
 Define la versión actual de la aplicación y el endpoint de GitHub Releases para actualizaciones.
 """
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 APP_NAME = "Trabs Gerencia"
 APP_ORGANIZATION = "Accuratek"
 APP_USER_MODEL_ID = f"Accuratek.TrabsGerencia.{__version__}"
