@@ -38,34 +38,64 @@ class CheckUpdateWorker(QThread):
 
             data = response.json()
             
-            # Soporte nativo para GitHub Releases API
-            if "tag_name" in data:
-                remote_ver_str = data.get("tag_name", "").lstrip("v").strip()
-                release_notes = data.get("body", "Novedades y mejoras en esta versión.")
-                
-                # Buscar el instalador .exe entre los assets del Release
-                download_url = ""
-                for asset in data.get("assets", []):
-                    if asset.get("name", "").endswith(".exe"):
-                        download_url = asset.get("browser_download_url", "")
+            # Si el endpoint devuelve una lista de releases (recomendado)
+            target_release = None
+            if isinstance(data, list):
+                for rel in data:
+                    tag = rel.get("tag_name", "").lower()
+                    # Ignorar releases móviles
+                    if tag.startswith("mobile-"):
+                        continue
+                    # Verificar si contiene instalador .exe
+                    for asset in rel.get("assets", []):
+                        if asset.get("name", "").lower().endswith(".exe"):
+                            target_release = rel
+                            break
+                    if target_release:
                         break
-                
-                update_info = {
-                    "version": remote_ver_str,
-                    "release_notes": release_notes,
-                    "release_date": data.get("published_at", "")[:10],
-                    "download_url": download_url,
-                    "local_version": self.current_ver,
-                    "remote_version": remote_ver_str,
-                }
-            else:
-                remote_ver_str = data.get("version", "").strip()
-                update_info = data
-                update_info["local_version"] = self.current_ver
-                update_info["remote_version"] = remote_ver_str
+            elif isinstance(data, dict):
+                # Si se consultó un release individual (ej: /releases/latest)
+                tag = data.get("tag_name", "").lower()
+                if not tag.startswith("mobile-"):
+                    for asset in data.get("assets", []):
+                        if asset.get("name", "").lower().endswith(".exe"):
+                            target_release = data
+                            break
 
-            if not remote_ver_str:
-                self.check_failed.emit("No se pudo determinar el número de versión remota.")
+            if not target_release:
+                self.up_to_date.emit({
+                    "version": self.current_ver,
+                    "local_version": self.current_ver,
+                    "remote_version": self.current_ver,
+                    "download_url": "",
+                    "release_notes": ""
+                })
+                return
+
+            tag_raw = target_release.get("tag_name", "")
+            # Limpiar prefijos como 'desktop-v', 'desktop-', 'v', etc.
+            import re
+            remote_ver_str = re.sub(r'^[^\d]*', '', tag_raw).strip()
+            release_notes = target_release.get("body", "Novedades y mejoras en esta versión.")
+            
+            # Buscar el instalador .exe entre los assets del Release
+            download_url = ""
+            for asset in target_release.get("assets", []):
+                if asset.get("name", "").lower().endswith(".exe"):
+                    download_url = asset.get("browser_download_url", "")
+                    break
+            
+            update_info = {
+                "version": remote_ver_str,
+                "release_notes": release_notes,
+                "release_date": target_release.get("published_at", "")[:10],
+                "download_url": download_url,
+                "local_version": self.current_ver,
+                "remote_version": remote_ver_str,
+            }
+
+            if not remote_ver_str or not download_url:
+                self.up_to_date.emit(update_info)
                 return
 
             local_v = version.parse(self.current_ver)

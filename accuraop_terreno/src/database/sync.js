@@ -27,6 +27,17 @@ export async function syncCatalog(jefeId) {
   try {
     const database = getDatabase();
 
+    // 0. Fetch perfil_usuario
+    let perfilUsuario = null;
+    if (jefeId) {
+      const { data: pData, error: pErr } = await supabase
+        .from('perfiles_usuario')
+        .select('*')
+        .eq('id', jefeId);
+      if (pErr) console.warn('[syncCatalog] perfiles_usuario fetch error:', pErr);
+      perfilUsuario = pData?.[0] || null;
+    }
+
     // 1. Fetch obras (Supabase RLS automatically filters obras visible to user/admin)
     const { data: obras, error: obrasErr } = await supabase
       .from('obras')
@@ -76,6 +87,22 @@ export async function syncCatalog(jefeId) {
     // ── Persist to SQLite ──────────────────────────────────────────────
     database.execSync('BEGIN TRANSACTION');
     try {
+      // perfiles_usuario
+      if (perfilUsuario) {
+        database.runSync(
+          `INSERT OR REPLACE INTO perfiles_usuario (id, email, nombre, rol, foto_perfil_url, telefono)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            perfilUsuario.id,
+            perfilUsuario.email || null,
+            perfilUsuario.nombre || null,
+            perfilUsuario.rol || 'jefe_obra',
+            perfilUsuario.foto_perfil_url || null,
+            perfilUsuario.telefono || null,
+          ]
+        );
+      }
+
       // Obras
       for (const o of obraList) {
         database.runSync(

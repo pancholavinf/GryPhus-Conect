@@ -11,16 +11,34 @@ import {
   ScrollView,
   RefreshControl,
   Image,
+  Alert,
+  Platform,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
   getObrasForJefe,
   getUnsyncedAvances,
   getUnsyncedAsistencias,
   getUnsyncedReportes,
+  savePerfilUsuario,
 } from '../database/db';
 import { syncCatalog, syncAvances, syncAsistencias, syncReportes } from '../database/sync';
+import { compressImage } from '../services/imageCompressor';
+import { supabase } from '../services/supabase';
 import { COLORS } from '../constants/theme';
 import Toast from 'react-native-toast-message';
+
+function formatRole(rol) {
+  if (!rol) return 'Supervisor';
+  const lower = String(rol).toLowerCase().trim();
+  if (lower === 'jefe_obra' || lower === 'jefe de obra' || lower === 'supervisor') {
+    return 'Supervisor';
+  }
+  if (lower === 'administrador' || lower === 'admin') {
+    return 'Administrador';
+  }
+  return rol.charAt(0).toUpperCase() + rol.slice(1);
+}
 
 export default function HomeScreen({ userProfile, onSelectObra, onLogout, onUpdateProfile }) {
   const [obras, setObras] = useState([]);
@@ -29,6 +47,156 @@ export default function HomeScreen({ userProfile, onSelectObra, onLogout, onUpda
   const [isSyncing, setIsSyncing] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+  const [modalAvatarError, setModalAvatarError] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+    setModalAvatarError(false);
+  }, [userProfile?.foto_perfil_url]);
+
+  const processAndUploadPhoto = async (localUri) => {
+    if (!localUri) return;
+    setIsUploadingAvatar(true);
+    Toast.show({ type: 'info', text1: 'Actualizando foto de perfil...' });
+
+    try {
+      // 1. Compress image
+      const compressedUri = await compressImage(localUri);
+
+      // 2. Upload to Supabase Storage
+      let publicUrl = compressedUri;
+      try {
+        const response = await fetch(compressedUri);
+        const blob = await response.blob();
+
+        const arrayBuffer = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(blob);
+        });
+
+        const fileName = `personal/${userProfile?.id || 'jefe'}_${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('accuratek-data')
+          .upload(fileName, arrayBuffer, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('accuratek-data')
+            .getPublicUrl(fileName);
+          if (urlData?.publicUrl) {
+            publicUrl = urlData.publicUrl;
+          }
+        } else {
+          console.warn('[handlePickAvatar] storage upload error:', uploadError);
+        }
+      } catch (uploadErr) {
+        console.warn('[handlePickAvatar] fetch/FileReader error:', uploadErr);
+      }
+
+      // 3. Update Supabase table & auth metadata
+      try {
+        if (supabase.from) {
+          await supabase
+            .from('perfiles_usuario')
+            .update({ foto_perfil_url: publicUrl })
+            .eq('id', userProfile?.id);
+        }
+        if (supabase.auth?.updateUser) {
+          await supabase.auth.updateUser({
+            data: { foto_perfil_url: publicUrl },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('[handlePickAvatar] Supabase update warning:', dbErr);
+      }
+
+      // 4. Update local SQLite DB
+      const updatedProfile = {
+        ...userProfile,
+        foto_perfil_url: publicUrl,
+      };
+      savePerfilUsuario(updatedProfile);
+
+      // 5. Update parent state
+      if (onUpdateProfile) {
+        onUpdateProfile(updatedProfile);
+      }
+
+      setAvatarError(false);
+      setModalAvatarError(false);
+
+      Toast.show({ type: 'success', text1: '✓ Foto de perfil actualizada' });
+    } catch (err) {
+      console.error('[handlePickAvatar] Error:', err);
+      Toast.show({ type: 'error', text1: 'Error al actualizar foto', text2: err.message });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleLaunchCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({ type: 'error', text1: 'Permiso denegado', text2: 'Se requiere permiso de cámara.' });
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        await processAndUploadPhoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Error al abrir cámara', text2: err.message });
+    }
+  };
+
+  const handleLaunchGallery = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({ type: 'error', text1: 'Permiso denegado', text2: 'Se requiere permiso de galería.' });
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        await processAndUploadPhoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      Toast.show({ type: 'error', text1: 'Error al abrir galería', text2: err.message });
+    }
+  };
+
+  const handlePickAvatar = () => {
+    if (Platform.OS === 'web') {
+      handleLaunchGallery();
+      return;
+    }
+    Alert.alert(
+      'Foto de Perfil',
+      'Seleccione cómo desea agregar o cambiar su foto',
+      [
+        { text: '📷 Tomar Foto', onPress: handleLaunchCamera },
+        { text: '🖼️ Elegir de Galería', onPress: handleLaunchGallery },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    );
+  };
 
   const loadObrasAndStats = useCallback(() => {
     try {
@@ -100,14 +268,23 @@ export default function HomeScreen({ userProfile, onSelectObra, onLogout, onUpda
           activeOpacity={0.8}
         >
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>
-              {(userProfile.nombre || userProfile.email || 'U')[0].toUpperCase()}
-            </Text>
+            {userProfile?.foto_perfil_url && !avatarError ? (
+              <Image
+                source={{ uri: userProfile.foto_perfil_url }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <Text style={styles.avatarText}>
+                {(userProfile?.nombre || userProfile?.email || 'U')[0].toUpperCase()}
+              </Text>
+            )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.welcomeText}>Jefe de Obra</Text>
+            <Text style={styles.welcomeText}>Supervisor</Text>
             <Text style={styles.userName} numberOfLines={1}>
-              {userProfile.nombre || userProfile.email}
+              {userProfile?.nombre || userProfile?.email}
             </Text>
           </View>
         </TouchableOpacity>
@@ -160,12 +337,17 @@ export default function HomeScreen({ userProfile, onSelectObra, onLogout, onUpda
         <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
       ) : obras.length === 0 ? (
         <ScrollView
+          testID="empty-obras-view"
           contentContainerStyle={styles.emptyContainer}
           refreshControl={
             <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />
           }
         >
-          <Text style={styles.emptyIcon}>🏗️</Text>
+          <Image
+            source={require('../../assets/logo_trabs_circular_sf.png')}
+            style={styles.emptyLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.emptyTitle}>Sin obras asignadas</Text>
           <Text style={styles.emptyText}>
             No tiene obras asignadas en este momento. Deslice hacia abajo para actualizar.
@@ -222,27 +404,52 @@ export default function HomeScreen({ userProfile, onSelectObra, onLogout, onUpda
             </View>
 
             <View style={styles.profileAvatarSection}>
-              <View style={styles.largeAvatarCircle}>
-                <Text style={styles.largeAvatarText}>
-                  {(userProfile.nombre || userProfile.email || 'U')[0].toUpperCase()}
+              <TouchableOpacity
+                style={styles.largeAvatarCircle}
+                onPress={handlePickAvatar}
+                disabled={isUploadingAvatar}
+                activeOpacity={0.8}
+                testID="avatar-touchable"
+              >
+                {isUploadingAvatar ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : userProfile?.foto_perfil_url && !modalAvatarError ? (
+                  <Image
+                    source={{ uri: userProfile.foto_perfil_url }}
+                    style={styles.largeAvatarImage}
+                    resizeMode="cover"
+                    onError={() => setModalAvatarError(true)}
+                  />
+                ) : (
+                  <Text style={styles.largeAvatarText}>
+                    {(userProfile?.nombre || userProfile?.email || 'U')[0].toUpperCase()}
+                  </Text>
+                )}
+                <View style={styles.cameraIconBadge}>
+                  <Text style={styles.cameraIconText}>📷</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handlePickAvatar}
+                disabled={isUploadingAvatar}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.changePhotoText}>
+                  {isUploadingAvatar ? 'Subiendo foto...' : 'Toca para cambiar foto'}
                 </Text>
-              </View>
-              <Text style={styles.profileName}>{userProfile.nombre || 'Jefe de Obra'}</Text>
-              <Text style={styles.profileRole}>Rol: {userProfile.rol || 'jefe_obra'}</Text>
+              </TouchableOpacity>
+              <Text style={styles.profileName}>{userProfile?.nombre || 'Supervisor'}</Text>
+              <Text style={styles.profileRole}>Rol: {formatRole(userProfile?.rol)}</Text>
             </View>
 
             <View style={styles.profileInfoList}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Correo:</Text>
-                <Text style={styles.infoValue}>{userProfile.email}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>ID Usuario:</Text>
-                <Text style={styles.infoValueSmall} numberOfLines={1}>{userProfile.id}</Text>
+                <Text style={styles.infoValue}>{userProfile?.email}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Teléfono:</Text>
-                <Text style={styles.infoValue}>{userProfile.telefono || 'No registrado'}</Text>
+                <Text style={styles.infoValue}>{userProfile?.telefono || 'No registrado'}</Text>
               </View>
             </View>
 
@@ -253,7 +460,7 @@ export default function HomeScreen({ userProfile, onSelectObra, onLogout, onUpda
                 resizeMode="contain"
               />
               <Text style={{ fontSize: 11, color: COLORS.textLight, fontFamily: 'Inter', marginTop: 2 }}>
-                Trabs Terreno · v1.0
+                Trabs Terreno · v1.0 · Accuratek
               </Text>
             </View>
 
@@ -302,6 +509,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   avatarText: {
     color: '#FFF',
@@ -437,8 +650,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 40,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyLogo: {
+    width: 100,
+    height: 100,
     marginBottom: 16,
   },
   emptyTitle: {
@@ -486,18 +700,46 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   largeAvatarCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+    overflow: 'hidden',
+  },
+  largeAvatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   largeAvatarText: {
     color: '#FFF',
     fontSize: 26,
     fontFamily: 'Montserrat-Bold',
+  },
+  cameraIconBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: COLORS.secondary,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  cameraIconText: {
+    fontSize: 11,
+  },
+  changePhotoText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: COLORS.primary,
+    marginBottom: 8,
   },
   profileName: {
     fontSize: 18,

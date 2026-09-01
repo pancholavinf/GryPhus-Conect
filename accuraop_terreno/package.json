@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test:e2e": "jest --config jest.e2e.config.js tests/test_mobile_attendance_sync.test.js tests/tier1_feature.test.js tests/test_multi_item_advance.test.js"
+    "test": "jest --config jest.e2e.config.js",
+    "test:e2e": "jest --config jest.e2e.config.js tests/test_mobile_attendance_sync.test.js tests/tier1_feature.test.js tests/test_multi_item_advance.test.js tests/test_profile_and_empty_state.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -21,9 +22,11 @@
     "@supabase/supabase-js": "^2.110.5",
     "expo": "~54.0.0",
     "expo-camera": "~17.0.10",
+    "expo-file-system": "~19.0.24",
     "expo-font": "~14.0.12",
     "expo-image-manipulator": "~14.0.8",
     "expo-image-picker": "~17.0.11",
+    "expo-intent-launcher": "~13.0.8",
     "expo-linear-gradient": "~15.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-sqlite": "~16.0.10",

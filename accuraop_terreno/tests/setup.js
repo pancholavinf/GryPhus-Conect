@@ -42,7 +42,7 @@ jest.mock('expo-sqlite', () => ({
     runSync: (sql, params = []) => {
       if (sql.includes('INSERT OR REPLACE INTO perfiles_usuario')) {
         mockTables.perfiles_usuario = mockTables.perfiles_usuario.filter(x => x.id !== params[0]);
-        mockTables.perfiles_usuario.push({ id: params[0], email: params[1], nombre: params[2], rol: params[3] });
+        mockTables.perfiles_usuario.push({ id: params[0], email: params[1], nombre: params[2], rol: params[3], foto_perfil_url: params[4], telefono: params[5] });
         return { changes: 1 };
       }
       if (sql.includes('INSERT OR REPLACE INTO obras_jefes_obra')) {

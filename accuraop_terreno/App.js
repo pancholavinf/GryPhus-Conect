@@ -20,6 +20,8 @@ import ReporteDiarioScreen from './src/screens/ReporteDiarioScreen';
 import ObraMenuScreen from './src/screens/ObraMenuScreen';
 import AsistenciaScreen from './src/screens/AsistenciaScreen';
 import ControlObraScreen from './src/screens/ControlObraScreen';
+import MandatoryUpdateModal from './src/components/MandatoryUpdateModal';
+import { checkForUpdate } from './src/services/updateService';
 
 SplashScreen.preventAutoHideAsync().catch((err) => {
   console.warn('SplashScreen.preventAutoHideAsync() failed', err);
@@ -35,6 +37,8 @@ export default function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [activeObra, setActiveObra] = useState(null);
   const [catalogSynced, setCatalogSynced] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [isMandatoryUpdateVisible, setIsMandatoryUpdateVisible] = useState(false);
 
   const isSyncingRef = useRef(false);
   const bgSyncUnsubRef = useRef(null);
@@ -91,17 +95,46 @@ export default function App() {
       setDbError(error);
     }
 
+    const resolveProfile = async (user) => {
+      const userId = user?.id || 'jefe-123';
+      let profile = {
+        id: userId,
+        email: user?.email,
+        nombre: user?.user_metadata?.nombre || user?.email?.split('@')[0] || 'Supervisor',
+        foto_perfil_url: user?.user_metadata?.foto_perfil_url || '',
+        telefono: user?.user_metadata?.telefono || '',
+        rol: 'jefe_obra',
+      };
+
+      try {
+        if (supabase.from) {
+          const { data: profiles } = await supabase
+            .from('perfiles_usuario')
+            .select('*')
+            .eq('id', userId);
+          const p = profiles?.[0];
+          if (p) {
+            profile = {
+              id: p.id || profile.id,
+              email: p.email || profile.email,
+              nombre: p.nombre || profile.nombre,
+              foto_perfil_url: p.foto_perfil_url || profile.foto_perfil_url,
+              telefono: p.telefono || profile.telefono,
+              rol: p.rol || profile.rol,
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching perfiles_usuario in App.js:', err);
+      }
+
+      return profile;
+    };
+
     if (supabase.auth && typeof supabase.auth.getSession === 'function') {
       supabase.auth.getSession().then(async ({ data: { session: activeSession } }) => {
         if (activeSession) {
-          const profile = {
-            id: activeSession.user?.id || 'jefe-123',
-            email: activeSession.user?.email,
-            nombre: activeSession.user?.user_metadata?.nombre || activeSession.user?.email?.split('@')[0],
-            foto_perfil_url: activeSession.user?.user_metadata?.foto_perfil_url || '',
-            telefono: activeSession.user?.user_metadata?.telefono || '',
-            rol: 'jefe_obra',
-          };
+          const profile = await resolveProfile(activeSession.user);
           setSession(activeSession);
           setUserProfile(profile);
           try {
@@ -126,14 +159,7 @@ export default function App() {
     if (supabase.auth && typeof supabase.auth.onAuthStateChange === 'function') {
       const authListener = supabase.auth.onAuthStateChange(async (_event, activeSession) => {
         if (activeSession) {
-          const profile = {
-            id: activeSession.user?.id || 'jefe-123',
-            email: activeSession.user?.email,
-            nombre: activeSession.user?.user_metadata?.nombre || activeSession.user?.email?.split('@')[0],
-            foto_perfil_url: activeSession.user?.user_metadata?.foto_perfil_url || '',
-            telefono: activeSession.user?.user_metadata?.telefono || '',
-            rol: 'jefe_obra',
-          };
+          const profile = await resolveProfile(activeSession.user);
           setSession(activeSession);
           setUserProfile(profile);
           try {
@@ -165,6 +191,27 @@ export default function App() {
       startBgSync();
     }
   }, [session, userProfile, catalogSynced, startBgSync]);
+
+  // Verificar actualizaciones obligatorias al iniciar la app
+  useEffect(() => {
+    let isMounted = true;
+    const checkUpdates = async () => {
+      try {
+        const info = await checkForUpdate();
+        if (isMounted && info && info.isUpdateAvailable) {
+          setUpdateInfo(info);
+          setIsMandatoryUpdateVisible(true);
+        }
+      } catch (err) {
+        console.warn('[App] Error al verificar actualizaciones obligatorias:', err);
+      }
+    };
+
+    checkUpdates();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLoginSuccess = async ({ session: userSession, userProfile: profile }) => {
     try {
@@ -301,6 +348,10 @@ export default function App() {
           )}
         </Stack.Navigator>
       </NavigationContainer>
+      <MandatoryUpdateModal
+        visible={isMandatoryUpdateVisible}
+        updateInfo={updateInfo}
+      />
       <Toast config={toastConfig} />
     </SafeAreaView>
   );

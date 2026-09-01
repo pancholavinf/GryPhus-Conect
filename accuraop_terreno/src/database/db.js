@@ -184,6 +184,30 @@ export function initDatabase() {
   `);
 }
 
+// ── Perfiles de Usuario ────────────────────────────────────────────
+
+export function getPerfilUsuario(id) {
+  if (Platform.OS === 'web') return null;
+  const database = getDatabase();
+  try {
+    const rows = database.getAllSync('SELECT * FROM perfiles_usuario WHERE id = ? LIMIT 1', [id]);
+    return rows?.[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+export function savePerfilUsuario(payload) {
+  const { id, email, nombre, rol, foto_perfil_url, telefono } = payload;
+  if (Platform.OS === 'web') return;
+  const database = getDatabase();
+  return database.runSync(
+    `INSERT OR REPLACE INTO perfiles_usuario (id, email, nombre, rol, foto_perfil_url, telefono)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, email || null, nombre || null, rol || 'jefe_obra', foto_perfil_url || null, telefono || null]
+  );
+}
+
 // ── Obras ──────────────────────────────────────────────────────────
 
 export function getObrasForJefe(jefeId) {
