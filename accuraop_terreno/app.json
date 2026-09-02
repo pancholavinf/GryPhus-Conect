@@ -25,14 +25,19 @@
       "bundler": "metro",
       "backgroundColor": "#F4F6F8"
     },
-    "extra": {
-      "eas": {
-        "projectId": "a88b63d6-4380-4931-b81b-1cbbfdedf108"
-      }
-    },
     "plugins": [
       "expo-font",
-      ["expo-sqlite", { "useSQLiteCAPI": true }]
-    ]
+      [
+        "expo-sqlite",
+        {
+          "useSQLiteCAPI": true
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c763fb0b-74f6-445b-8361-164c3e551a0b"
+      }
+    }
   }
 }

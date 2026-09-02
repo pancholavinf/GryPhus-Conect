@@ -138,6 +138,63 @@ def upload_release_to_github(tag: str, release_title: str, release_notes: str, i
         print(f"Error al subir asset a GitHub HTTP {up_resp.status_code}: {up_resp.text}")
         return False
 
+def get_local_desktop_version(version_py_path: str) -> str:
+    """Obtiene la versión actual desde version.py"""
+    if os.path.exists(version_py_path):
+        try:
+            with open(version_py_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                m = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
+                if m:
+                    return m.group(1)
+        except Exception:
+            pass
+    return "1.0.6"
+
+def get_latest_github_desktop_version(token: str = None) -> str:
+    """Consulta la última versión de escritorio en GitHub Releases"""
+    try:
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "TrabsGerencia-Publisher/1.0"
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases"
+        resp = requests.get(url, headers=headers, timeout=5)
+        if resp.status_code == 200:
+            releases = resp.json()
+            if isinstance(releases, list):
+                for r in releases:
+                    tag = (r.get("tag_name") or "").lower()
+                    if not tag.startswith("mobile-"):
+                        ver = re.sub(r'^[^\d]*', '', tag).strip()
+                        if ver:
+                            return ver
+    except Exception:
+        pass
+    return None
+
+def bump_patch_version(ver_str: str) -> str:
+    """Incrementa el patch de una versión semántica X.Y.Z -> X.Y.(Z+1)"""
+    clean_ver = re.sub(r'^[^\d]*', '', ver_str).strip()
+    match = re.match(r'^(\d+)\.(\d+)\.(\d+)$', clean_ver)
+    if match:
+        major, minor, patch = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        return f"{major}.{minor}.{patch + 1}"
+    return "1.0.7"
+
+def semver_max(v1: str, v2: str) -> str:
+    """Retorna la versión semántica mayor entre dos cadenas"""
+    if not v1: return v2
+    if not v2: return v1
+    try:
+        p1 = [int(x) for x in re.sub(r'^[^\d]*', '', v1).split('.')]
+        p2 = [int(x) for x in re.sub(r'^[^\d]*', '', v2).split('.')]
+        return v1 if p1 >= p2 else v2
+    except Exception:
+        return v1 or v2
+
 def main():
     parser = argparse.ArgumentParser(description="Automatiza la publicación completa de una nueva versión en GitHub Releases.")
     parser.add_argument("--version", "-v", type=str, help="Nuevo número de versión (ej: 1.0.3)")
@@ -155,9 +212,28 @@ def main():
             load_dotenv(p)
             break
 
+    gh_token = args.token or os.getenv("GITHUB_TOKEN")
+
+    version_py = os.path.join(base_dir, "src", "version.py")
+    local_ver = get_local_desktop_version(version_py)
+    remote_ver = get_latest_github_desktop_version(gh_token)
+
+    current_highest = semver_max(local_ver, remote_ver)
+    suggested_ver = bump_patch_version(current_highest)
+
     new_ver = args.version
     if not new_ver:
-        new_ver = input("Ingresa el nuevo número de versión (ej: 1.0.3): ").strip()
+        print("====================================================")
+        print("  Detección Automática de Versión de Escritorio")
+        print("====================================================")
+        print(f"  • Versión actual local:       {local_ver}")
+        if remote_ver:
+            print(f"  • Última versión en GitHub:   {remote_ver}")
+        print(f"  👉 Siguiente versión sugerida: {suggested_ver}")
+        print("----------------------------------------------------")
+        
+        user_input = input(f"Presiona [Enter] para usar '{suggested_ver}' o escribe una versión personalizada: ").strip()
+        new_ver = user_input if user_input else suggested_ver
     
     if not re.match(r'^\d+\.\d+\.\d+$', new_ver):
         print(f"Error: La versión '{new_ver}' no cumple con el formato semántico X.Y.Z")
