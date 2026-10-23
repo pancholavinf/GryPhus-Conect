@@ -160,8 +160,9 @@ class MainView(QWidget):
         layout.addWidget(self.sidebar)
         layout.addWidget(self.content_stack)
         
-        # Seleccionar la pestaña por defecto y cargar datos iniciales
-        self.switch_view(0)
+        # Seleccionar la pestaña por defecto (la carga de datos ocurre en go_to_main_app tras autenticar)
+        self.content_stack.setCurrentIndex(0)
+        self.btn_dashboard.setChecked(True)
 
     def navegar_a_obra(self, obra):
         """Navega al detalle de la obra dentro del mismo stack, sin abrir ventana nueva."""

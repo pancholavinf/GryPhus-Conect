@@ -5,16 +5,22 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QColor, QPixmap
+import os
 import pandas as pd
 import uuid
 from src.core.workers import FetchJefesWorker, ProcessIngestaWorker
+from src.core.data_manager import DataManager
 
 class PreciosMaterialesDialog(QDialog):
     def __init__(self, materiales, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Precios de Materiales")
+        self.setWindowTitle("Precios Unitarios por m² de Materiales")
         self.layout = QVBoxLayout(self)
         
+        lbl_info = QLabel("Defina el precio unitario por metro cuadrado ($ / m²) para cada material de la obra:")
+        lbl_info.setStyleSheet("font-weight: bold; color: #1F2421; margin-bottom: 6px;")
+        self.layout.addWidget(lbl_info)
+
         self.inputs = {}
         form_layout = QFormLayout()
         
@@ -22,6 +28,7 @@ class PreciosMaterialesDialog(QDialog):
             spin_box = QDoubleSpinBox()
             spin_box.setMaximum(1e9)
             spin_box.setPrefix("$ ")
+            spin_box.setSuffix(" / m²")
             self.inputs[material] = spin_box
             form_layout.addRow(QLabel(str(material)), spin_box)
             
@@ -195,7 +202,7 @@ class IngestaContent(QWidget):
         
         if file_path:
             self.selected_file = file_path
-            self.file_label.setText(file_path.split("/")[-1])
+            self.file_label.setText(os.path.basename(file_path))
             try:
                 columnas_interes = [
                     "UBICACIÓN", "PLANO", "DESCRIPCIÓN EN PLANO", "ESTRUCTURA", "DIMENSIONES",
@@ -212,7 +219,7 @@ class IngestaContent(QWidget):
                 
     def populate_table(self, df):
         self.table.clear()
-        preview_df = df.head(50)
+        preview_df = df.head(50).reset_index(drop=True)
         
         self.table.setColumnCount(len(preview_df.columns))
         self.table.setRowCount(len(preview_df.index))
@@ -220,7 +227,7 @@ class IngestaContent(QWidget):
         
         for i, row in preview_df.iterrows():
             for j, val in enumerate(row):
-                item = QTableWidgetItem(str(val))
+                item = QTableWidgetItem("" if pd.isna(val) else str(val))
                 self.table.setItem(i, j, item)
                 
         # Auto-size columns to contents for a clean layout
@@ -297,6 +304,7 @@ class IngestaContent(QWidget):
                         else:
                             # Fallback si por alguna razón falla el retorno
                             materiales_existentes[mat_nombre] = new_id
+                    DataManager(self.supabase_client).invalidate_cache("materiales")
                 else:
                     return # Cancelado por el usuario
             

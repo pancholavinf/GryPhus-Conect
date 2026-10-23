@@ -90,7 +90,7 @@ class MainAppWindow(QMainWindow):
         ]
         icon_path = None
         for d in possible_dirs:
-            for fname in ["app_icon.ico", "logo_gryphus_circular_sf.png", "logo_gryphus_solo_sf.png", "logo_gryphus_circular_sf.png"]:
+            for fname in ["gryphus_conect_icon.ico", "app_icon.ico", "logo_gryphus_circular_sf.png", "logo_gryphus_solo_sf.png"]:
                 p = os.path.join(d, fname)
                 if os.path.exists(p):
                     icon_path = p
@@ -340,6 +340,7 @@ class MainAppWindow(QMainWindow):
         self.logout_worker.start()
 
     def go_to_login(self):
+        self.login_screen.password_input.clear()
         self.stacked_widget.setCurrentWidget(self.login_screen)
 
 def main():
@@ -348,8 +349,8 @@ def main():
     # Set application-wide icon
     base_dir = os.path.dirname(os.path.abspath(__file__))
     icon_candidates = [
+        os.path.join(base_dir, "assets", "gryphus_conect_icon.ico"),
         os.path.join(base_dir, "assets", "app_icon.ico"),
-        os.path.join(base_dir, "assets", "logo_gryphus_solo_sf.png"),
         os.path.join(base_dir, "assets", "logo_gryphus_solo_sf.png"),
         os.path.join(base_dir, "assets", "logo_gryphus_circular_sf.png"),
         os.path.join(base_dir, "assets", "LOGO.png"),

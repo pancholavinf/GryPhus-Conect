@@ -44,6 +44,16 @@ class DataManager:
             else:
                 self._cache.clear()
 
+    def invalidate_obra_details(self, obra_id: Optional[str] = None):
+        """Invalida el caché de detalles de una obra específica o de todas las obras."""
+        with self._exec_lock:
+            if obra_id:
+                self._cache.pop(f"obra_details_{obra_id}", None)
+            else:
+                keys_to_remove = [k for k in self._cache if k.startswith("obra_details_")]
+                for k in keys_to_remove:
+                    self._cache.pop(k, None)
+
     def _safe_execute(self, query_builder):
         """Ejecuta una consulta Supabase asegurando thread-safety y reintentos ante WSAEWOULDBLOCK en Windows."""
         with self._exec_lock:
@@ -125,13 +135,18 @@ class DataManager:
         res_jefes = self._safe_execute(self.supabase.table("perfiles_usuario").select("id, nombre"))
         jefes_dict = {j.get("id"): (j.get("nombre") or "Desconocido") for j in (res_jefes.data or [])}
 
+        reporte_obra_map = {}
         for rep in reportes:
             rep["obra_nombre"] = obras_dict.get(rep.get("obra_id")) or "Obra Desconocida"
             rep["jefe_nombre"] = jefes_dict.get(rep.get("jefe_obra_id")) or "Supervisor Desconocido"
+            if rep.get("id"):
+                reporte_obra_map[rep.get("id")] = rep.get("obra_id")
 
         # 3. Consumos, Materiales, Items, Avances
         res_consumos = self._safe_execute(self.supabase.table("reporte_obra_consumos").select("*"))
         consumos = res_consumos.data or []
+        for c in consumos:
+            c["obra_id"] = reporte_obra_map.get(c.get("reporte_obra_id"))
 
         res_materiales = self._safe_execute(self.supabase.table("materiales").select("*"))
         materiales = res_materiales.data or []
@@ -139,7 +154,9 @@ class DataManager:
         res_items = self._safe_execute(self.supabase.table("items_obra").select("id, obra_id, material_id"))
         items = res_items.data or []
 
-        res_avances = self._safe_execute(self.supabase.table("avances").select("id, item_obra_id, cantidad, fecha_captura_local"))
+        res_avances = self._safe_execute(
+            self.supabase.table("avances").select("id, item_obra_id, cantidad, fecha_captura_local, estado_revision")
+        )
         avances = res_avances.data or []
 
         result = (reportes, consumos, materiales, items, avances)
@@ -390,8 +407,12 @@ class DataManager:
                         av["item_estructura"] = item_info.get("estructura") or ""
                         av["item_descripcion_plano"] = item_info.get("descripcion_plano") or ""
                         av["item_material"] = item_info.get("material") or ""
-                        av["item_precio_unitario"] = item_info.get("precio_unitario_contrato") or 0.0
-                        av["item_cantidad_total"] = item_info.get("cantidad") or 0.0
+                        av["item_precio_unitario"] = float(item_info.get("precio_unitario_contrato") or 0.0)
+                        av["item_area_expuesta_m2"] = float(item_info.get("area_expuesta_m2") or 0.0)
+                        av["item_cantidad_unidades"] = float(item_info.get("cantidad") or 0.0)
+                        av["item_cantidad_total"] = float(
+                            item_info.get("area_expuesta_m2") or item_info.get("cantidad") or 0.0
+                        )
 
                         edp_id = av.get("estado_pago_id")
                         if edp_id and edp_id in edps_dict:

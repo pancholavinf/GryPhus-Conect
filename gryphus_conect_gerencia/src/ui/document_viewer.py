@@ -120,7 +120,7 @@ class DocumentViewerDialog(QDialog):
         self.btn_download.clicked.connect(self.descargar_copia)
         header_layout.addWidget(self.btn_download)
 
-        self.btn_open_external = QPushButton("️ Abrir en Sistema")
+        self.btn_open_external = QPushButton("Abrir en Sistema")
         self.btn_open_external.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_open_external.setEnabled(False)
         self.btn_open_external.setStyleSheet("""

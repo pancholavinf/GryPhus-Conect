@@ -208,7 +208,7 @@ def install_update_and_restart(installer_path: str, silent: bool = True) -> bool
         # /CLOSEAPPLICATIONS: Cierra automáticamente las instancias de la app que usan los binarios
         # /RESTARTAPPLICATIONS=0: No forzar reinicio por el gestor de reinicios de Windows
         if silent:
-            cmd = [installer_path, "/SILENT", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS=0"]
+            cmd = [installer_path, "/SILENT", "/TASKS=desktopicon", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS=0"]
         else:
             cmd = [installer_path]
 

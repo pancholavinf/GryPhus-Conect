@@ -77,14 +77,20 @@ class GraficosRendimientoDialog(QDialog):
         if not mat_info:
             return
             
-        # 1. Filtrar consumos
-        mat_consumos = [c for c in self.consumos if c.get("material_id") == mat_id]
+        # 1. Filtrar consumos exclusivamente de la obra seleccionada
+        mat_consumos = [
+            c for c in self.consumos
+            if c.get("material_id") == mat_id and (not c.get("obra_id") or c.get("obra_id") == self.obra_id)
+        ]
         
         # 2. Filtrar items asociados al material
-        items_ids = [i.get("id") for i in self.items if i.get("material_id") == mat_id and i.get("obra_id") == self.obra_id]
+        items_ids = {i.get("id") for i in self.items if i.get("material_id") == mat_id and i.get("obra_id") == self.obra_id}
         
-        # 3. Filtrar avances de esos items
-        avances_mat = [av for av in self.avances if av.get("item_obra_id") in items_ids]
+        # 3. Filtrar avances de esos items (excluyendo avances rechazados)
+        avances_mat = [
+            av for av in self.avances
+            if av.get("item_obra_id") in items_ids and str(av.get("estado_revision") or "").lower() != "rechazado"
+        ]
         
         # 4. Agrupar consumos reales por fecha
         consumos_por_dia = {}
@@ -218,9 +224,9 @@ class ReportesContent(QWidget):
         self.combo_tipo = QComboBox()
         self.combo_tipo.addItem("Todos los tipos", None)
         self.combo_tipo.addItem("Diario (Actualización)", "actualizacion")
-        self.combo_tipo.addItem("️ Incidente", "incidente")
+        self.combo_tipo.addItem("Incidente", "incidente")
         self.combo_tipo.addItem("Accidente", "accidente")
-        self.combo_tipo.addItem("️ Otro", "otro")
+        self.combo_tipo.addItem("Otro", "otro")
         self.combo_tipo.currentIndexChanged.connect(self.aplicar_filtros)
         filtros_layout.addWidget(self.combo_tipo)
         filtros_layout.addSpacing(15)
@@ -246,7 +252,7 @@ class ReportesContent(QWidget):
         self.btn_refresh = QPushButton("Actualizar")
         self.btn_refresh.setObjectName("PrimaryButton")
         self.btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_refresh.clicked.connect(self.cargar_reportes)
+        self.btn_refresh.clicked.connect(lambda: self.cargar_reportes(force_refresh=True))
         filtros_layout.addWidget(self.btn_refresh)
 
         main_layout.addWidget(filtros_frame)
@@ -371,12 +377,12 @@ class ReportesContent(QWidget):
 
         # Fila de Acciones
         acciones_layout = QHBoxLayout()
-        self.btn_leido = QPushButton("️ Marcar como Leído")
+        self.btn_leido = QPushButton("Marcar como Leído")
         self.btn_leido.setStyleSheet("QPushButton { background-color: #262B29; color: #FFFFFF; font-weight: bold; border-radius: 6px; padding: 8px 16px; } QPushButton:hover { background-color: #334155; }")
         self.btn_leido.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_leido.clicked.connect(self.marcar_leido)
 
-        self.btn_responder = QPushButton("️ Enviar Respuesta")
+        self.btn_responder = QPushButton("Enviar Respuesta")
         self.btn_responder.setStyleSheet("QPushButton { background-color: #2E6F40; color: #FFFFFF; font-weight: bold; border-radius: 6px; padding: 8px 20px; } QPushButton:hover { background-color: #3D523C; }")
         self.btn_responder.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_responder.clicked.connect(self.enviar_respuesta)
@@ -401,7 +407,7 @@ class ReportesContent(QWidget):
         # Ajustar proporciones de inicio en el Splitter (40% izquierda, 60% derecha)
         splitter.setSizes([450, 650])
 
-    def cargar_reportes(self):
+    def cargar_reportes(self, force_refresh: bool = False):
         if not self.supabase_client:
             return
         
@@ -411,7 +417,7 @@ class ReportesContent(QWidget):
         self.detail_widget.hide()
         self.lbl_no_select.show()
 
-        self.worker = FetchReportesWorker(self.supabase_client)
+        self.worker = FetchReportesWorker(self.supabase_client, force_refresh=bool(force_refresh))
         self.worker.success.connect(self.on_reportes_cargados)
         self.worker.error.connect(self.on_error)
         self.worker.start()
@@ -419,7 +425,7 @@ class ReportesContent(QWidget):
     def on_error(self, message):
         self.btn_refresh.setEnabled(True)
         self.btn_refresh.setText("Actualizar")
-        self.btn_analizar.setEnabled(bool(self.combo_obra.currentData()))
+        self.btn_analizar.setEnabled(bool(self.fixed_obra_id or self.combo_obra.currentData()))
         QMessageBox.warning(self, "Error", message)
 
     def on_reportes_cargados(self, reportes, consumos, materiales, items, avances):
@@ -476,18 +482,18 @@ class ReportesContent(QWidget):
 
             tipo_val = r.get("tipo_reporte", "actualizacion")
             tipo_labels = {
-                "actualizacion": "Diario ",
-                "incidente": "Incidente ️",
-                "accidente": "Accidente ",
-                "otro": "Otro ️"
+                "actualizacion": "Diario",
+                "incidente": "Incidente",
+                "accidente": "Accidente",
+                "otro": "Otro"
             }
             tipo_lbl = tipo_labels.get(tipo_val, tipo_val)
 
             estado_val = r.get("estado_reb", "pendiente")
             estado_labels = {
                 "pendiente": "Pendiente",
-                "leido": "Leído ️",
-                "respondido": "Respondido "
+                "leido": "Leído",
+                "respondido": "Respondido"
             }
             estado_lbl = estado_labels.get(estado_val, estado_val)
 
@@ -611,10 +617,10 @@ class ReportesContent(QWidget):
             # Habilitar o deshabilitar botón de marcar leido
             if estado_val == "leido":
                 self.btn_leido.setEnabled(False)
-                self.btn_leido.setText("️ Reporte ya Leído")
+                self.btn_leido.setText("Reporte ya Leído")
             else:
                 self.btn_leido.setEnabled(True)
-                self.btn_leido.setText("️ Marcar como Leído")
+                self.btn_leido.setText("Marcar como Leído")
 
     def marcar_leido(self):
         if not self.reporte_seleccionado:
@@ -653,8 +659,8 @@ class ReportesContent(QWidget):
     def on_respuesta_exitosa(self, message):
         self.setEnabled(True)
         QMessageBox.information(self, "Éxito", message)
-        # Recargar datos
-        self.cargar_reportes()
+        # Recargar datos forzando refresco de caché
+        self.cargar_reportes(force_refresh=True)
 
     def abrir_graficos(self):
         obra_id = self.fixed_obra_id if self.fixed_obra_id else self.combo_obra.currentData()
@@ -666,8 +672,14 @@ class ReportesContent(QWidget):
             match_rep = next((r for r in self.reportes if r.get("obra_id") == self.fixed_obra_id), None)
             if match_rep:
                 obra_nombre = match_rep.get("obra_nombre", "Obra")
+
+        obra_reporte_ids = {r.get("id") for r in self.reportes if r.get("obra_id") == obra_id}
+        obra_consumos = [
+            c for c in self.consumos
+            if c.get("obra_id") == obra_id or c.get("reporte_obra_id") in obra_reporte_ids
+        ]
             
         dialog = GraficosRendimientoDialog(
-            obra_id, obra_nombre, self.consumos, self.materiales, self.items, self.avances, self
+            obra_id, obra_nombre, obra_consumos, self.materiales, self.items, self.avances, self
         )
         dialog.exec()

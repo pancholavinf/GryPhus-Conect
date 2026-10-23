@@ -150,9 +150,20 @@ class DashboardContent(QWidget):
     def __init__(self, supabase_client=None):
         super().__init__()
         self.supabase = supabase_client
-        self.layout = QVBoxLayout(self)
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+
+        self.scroll_content = QWidget()
+        self.layout = QVBoxLayout(self.scroll_content)
         self.layout.setContentsMargins(30, 30, 30, 30)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.scroll_area.setWidget(self.scroll_content)
+        outer_layout.addWidget(self.scroll_area)
         
         header = QLabel("Dashboard Principal - Mis Obras")
         header.setObjectName("TitleLabel")
@@ -167,10 +178,20 @@ class DashboardContent(QWidget):
         self.layout.addWidget(self.asistencia_title)
 
         self.asistencia_container = QHBoxLayout()
+        self.asistencia_container.setContentsMargins(0, 0, 0, 4)
         self.asistencia_container.setSpacing(12)
         self.asistencia_widget = QWidget()
         self.asistencia_widget.setLayout(self.asistencia_container)
-        self.layout.addWidget(self.asistencia_widget)
+
+        self.asistencia_scroll = QScrollArea()
+        self.asistencia_scroll.setWidgetResizable(True)
+        self.asistencia_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.asistencia_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.asistencia_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.asistencia_scroll.setFixedHeight(135)
+        self.asistencia_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self.asistencia_scroll.setWidget(self.asistencia_widget)
+        self.layout.addWidget(self.asistencia_scroll)
 
         self.lbl_sin_asistencia = QLabel("Sin asistencia registrada hoy.")
         self.lbl_sin_asistencia.setStyleSheet("color: #262B29; font-size: 13px; padding: 8px 0;")
@@ -224,9 +245,11 @@ class DashboardContent(QWidget):
                 item.widget().deleteLater()
 
         if not asistencias:
+            self.asistencia_scroll.setVisible(False)
             self.lbl_sin_asistencia.setVisible(True)
             return
 
+        self.asistencia_scroll.setVisible(True)
         self.lbl_sin_asistencia.setVisible(False)
         for data in asistencias:
             card = self._create_asistencia_card(data)
@@ -284,6 +307,11 @@ class DashboardContent(QWidget):
         QMessageBox.warning(self, "Error", message)
 
     def on_data_success(self, obras, jefes_por_obra):
+        for i in reversed(range(self.grid.count())):
+            widget = self.grid.itemAt(i).widget()
+            if widget is not None:
+                widget.deleteLater()
+
         row, col = 0, 0
         for obra in obras:
             obra_id = obra.get("id")

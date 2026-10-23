@@ -142,6 +142,7 @@ class LogoutWorker(QThread):
         try:
             settings = QSettings("GryphusSystems", "GryPhusConectGerencia")
             settings.remove("auth/refresh_token")
+            DataManager(self.supabase).invalidate_cache()
             if self.supabase:
                 self.supabase.auth.sign_out()
         except Exception:
@@ -303,13 +304,25 @@ class AssignJefeWorker(QThread):
             self.error.emit("Debe seleccionar un Jefe y una Obra válidos.")
             return
             
-        asignacion = {
-            "id": str(uuid.uuid4()),
-            "obra_id": self.obra_id,
-            "jefe_obra_id": self.jefe_id
-        }
         try:
-            self.supabase.table("obras_jefes_obra").insert(asignacion).execute()
+            dm = DataManager(self.supabase)
+            existing = dm.execute_safe(
+                self.supabase.table("obras_jefes_obra")
+                .select("id")
+                .eq("obra_id", self.obra_id)
+                .eq("jefe_obra_id", self.jefe_id)
+            )
+            if existing.data:
+                self.error.emit("Este supervisor ya se encuentra asignado a la obra seleccionada.")
+                return
+
+            asignacion = {
+                "id": str(uuid.uuid4()),
+                "obra_id": self.obra_id,
+                "jefe_obra_id": self.jefe_id
+            }
+            dm.execute_safe(self.supabase.table("obras_jefes_obra").insert(asignacion))
+            dm.invalidate_cache("dashboard_data")
             self.success.emit("Supervisor asignado a la obra exitosamente.")
         except Exception as e:
             self.error.emit(f"Error en la asignación: {str(e)}")
@@ -468,6 +481,10 @@ class ProcessIngestaWorker(QThread):
             except Exception as e:
                 print(f"Advertencia: No se pudo asignar el supervisor: {e}")
 
+        dm = DataManager(self.supabase)
+        dm.invalidate_cache("dashboard_data")
+        dm.invalidate_cache("materiales")
+        dm.invalidate_cache("reportes_obra_data")
         self.success.emit("Obra, ítems y asignación creados exitosamente.")
 
 
@@ -533,6 +550,7 @@ class RespondReporteWorker(QThread):
                 }
 
             self.supabase.table("reporte_obra").update(update_data).eq("id", self.reporte_id).execute()
+            DataManager(self.supabase).invalidate_cache("reportes_obra_data")
             status_text = "leído" if self.marcar_solo_leido else "respondido"
             self.success.emit(f"Reporte marcado como {status_text} exitosamente.")
         except Exception as e:
@@ -696,6 +714,7 @@ class DeleteMaterialWorker(QThread):
     def run(self):
         try:
             self.supabase.table("materiales").delete().eq("id", self.material_id).execute()
+            DataManager(self.supabase).invalidate_cache("materiales")
             self.success.emit("Material eliminado correctamente.")
         except Exception as e:
             self.error.emit(f"Error al eliminar material: {str(e)}")
@@ -1029,6 +1048,9 @@ class UpdateAvanceStatusWorker(QThread):
                 chunk = self.avance_ids[i:i + chunk_size]
                 self.supabase.table("avances").update({"estado_revision": self.nuevo_estado}).in_("id", chunk).execute()
 
+            dm = DataManager(self.supabase)
+            dm.invalidate_obra_details()
+            dm.invalidate_cache("reportes_obra_data")
             self.success.emit(self.avance_ids, self.nuevo_estado)
         except Exception as e:
             self.error.emit(f"Error al actualizar el estado de los avances: {str(e)}")
@@ -1063,6 +1085,7 @@ class UpdateJefeWorker(QThread):
             dm = DataManager(self.supabase)
             dm.execute_safe(self.supabase.table("perfiles_usuario").update(data).eq("id", self.jefe_id))
             dm.invalidate_cache("jefes_obra")
+            dm.invalidate_cache("dashboard_data")
             self.success.emit(f"Supervisor '{self.nombre}' actualizado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al actualizar Supervisor: {str(e)}")
@@ -1086,6 +1109,7 @@ class DeleteJefeWorker(QThread):
             dm.execute_safe(self.supabase.table("obras_jefes_obra").delete().eq("jefe_obra_id", self.jefe_id))
             dm.execute_safe(self.supabase.table("perfiles_usuario").delete().eq("id", self.jefe_id))
             dm.invalidate_cache("jefes_obra")
+            dm.invalidate_cache("dashboard_data")
             self.success.emit("Supervisor eliminado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al eliminar Supervisor: {str(e)}")
@@ -1095,7 +1119,7 @@ class UpdateMaestroWorker(QThread):
     success = pyqtSignal(str)
     error = pyqtSignal(str)
 
-    def __init__(self, supabase: Client, maestro_id: str, nombre: str, rut_dni: str, tipo_maestro_id: str, telefono: str = "", estado: str = "activo", foto_url: str = ""):
+    def __init__(self, supabase: Client, maestro_id: str, nombre: str, rut_dni: str, tipo_maestro_id: str, telefono: str = "", estado: str = "Activo", foto_url: str = ""):
         super().__init__()
         self.supabase = supabase
         self.maestro_id = maestro_id
@@ -1103,7 +1127,7 @@ class UpdateMaestroWorker(QThread):
         self.rut_dni = rut_dni
         self.tipo_maestro_id = tipo_maestro_id
         self.telefono = telefono
-        self.estado = estado
+        self.estado = "Activo" if str(estado or "Activo").strip().lower() == "activo" else "Inactivo"
         self.foto_url = foto_url
 
     def run(self):
@@ -1113,14 +1137,16 @@ class UpdateMaestroWorker(QThread):
                 return
             data = {
                 "nombre": self.nombre,
-                "rut_dni": self.rut_dni,
+                "rut_dni": self.rut_dni or None,
                 "tipo_maestro_id": self.tipo_maestro_id,
-                "telefono": self.telefono,
+                "telefono": self.telefono or None,
                 "estado": self.estado,
-                "foto_perfil_url": self.foto_url
+                "foto_perfil_url": self.foto_url or None
             }
             dm = DataManager(self.supabase)
             dm.execute_safe(self.supabase.table("maestros").update(data).eq("id", self.maestro_id))
+            dm.invalidate_cache("maestros")
+            dm.invalidate_cache("dashboard_asistencia")
             self.success.emit(f"Maestro '{self.nombre}' actualizado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al actualizar Maestro: {str(e)}")
@@ -1142,6 +1168,8 @@ class DeleteMaestroWorker(QThread):
                 return
             dm = DataManager(self.supabase)
             dm.execute_safe(self.supabase.table("maestros").delete().eq("id", self.maestro_id))
+            dm.invalidate_cache("maestros")
+            dm.invalidate_cache("dashboard_asistencia")
             self.success.emit("Maestro eliminado exitosamente.")
         except Exception as e:
             self.error.emit(f"Error al eliminar Maestro: {str(e)}")
@@ -1187,3 +1215,25 @@ class UploadFotoPerfilWorker(QThread):
             self.success.emit(public_url)
         except Exception as e:
             self.error.emit(f"Error al subir foto: {str(e)}")
+
+
+class DownloadImageWorker(QThread):
+    """Descarga una imagen remota de forma asíncrona sin bloquear el hilo de interfaz gráfica."""
+    success = pyqtSignal(str, bytes)  # url, raw_bytes
+    error = pyqtSignal(str)
+
+    def __init__(self, url: str):
+        super().__init__()
+        self.url = url
+
+    def run(self):
+        try:
+            import requests
+            r = requests.get(self.url, timeout=5)
+            if r.status_code == 200 and r.content:
+                self.success.emit(self.url, r.content)
+            else:
+                self.error.emit(f"HTTP {r.status_code}")
+        except Exception as e:
+            self.error.emit(str(e))
+

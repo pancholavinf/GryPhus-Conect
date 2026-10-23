@@ -8,9 +8,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QPainter, QPainterPath
 from src.core.workers import (
     FetchJefesWorker, FetchObrasWorker, CreateJefeWorker, AssignJefeWorker,
-    UpdateJefeWorker, DeleteJefeWorker, UploadFotoPerfilWorker
+    UpdateJefeWorker, DeleteJefeWorker, UploadFotoPerfilWorker, DownloadImageWorker
 )
-import requests
 
 
 class JefesContent(QWidget):
@@ -454,34 +453,38 @@ class JefesContent(QWidget):
             return
 
         self.btn_remove_foto.setVisible(self.is_editing)
-        try:
-            res = requests.get(url, timeout=3)
-            if res.status_code == 200:
-                pix = QPixmap()
-                if pix.loadFromData(res.content):
-                    scaled = pix.scaled(
-                        self.lbl_photo_preview.size(),
-                        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                    # Recorte circular
-                    target = QPixmap(self.lbl_photo_preview.size())
-                    target.fill(Qt.GlobalColor.transparent)
-                    painter = QPainter(target)
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                    path = QPainterPath()
-                    path.addEllipse(0, 0, self.lbl_photo_preview.width(), self.lbl_photo_preview.height())
-                    painter.setClipPath(path)
-                    x = (self.lbl_photo_preview.width() - scaled.width()) // 2
-                    y = (self.lbl_photo_preview.height() - scaled.height()) // 2
-                    painter.drawPixmap(x, y, scaled)
-                    painter.end()
-                    self.lbl_photo_preview.setText("")
-                    self.lbl_photo_preview.setPixmap(target)
-                    return
-        except Exception:
-            pass
-        self.lbl_photo_preview.setText("Foto")
+        self.lbl_photo_preview.setText("Cargando...")
+        self.lbl_photo_preview.setPixmap(QPixmap())
+        self._w_img = DownloadImageWorker(url)
+        self._w_img.success.connect(self._on_preview_downloaded)
+        self._w_img.error.connect(lambda _: self.lbl_photo_preview.setText("Foto"))
+        self._w_img.start()
+
+    def _on_preview_downloaded(self, url: str, content: bytes):
+        if url != self.current_foto_url:
+            return
+        pix = QPixmap()
+        if pix.loadFromData(content):
+            scaled = pix.scaled(
+                self.lbl_photo_preview.size(),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            target = QPixmap(self.lbl_photo_preview.size())
+            target.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(target)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            path = QPainterPath()
+            path.addEllipse(0, 0, self.lbl_photo_preview.width(), self.lbl_photo_preview.height())
+            painter.setClipPath(path)
+            x = (self.lbl_photo_preview.width() - scaled.width()) // 2
+            y = (self.lbl_photo_preview.height() - scaled.height()) // 2
+            painter.drawPixmap(x, y, scaled)
+            painter.end()
+            self.lbl_photo_preview.setText("")
+            self.lbl_photo_preview.setPixmap(target)
+        else:
+            self.lbl_photo_preview.setText("Foto")
 
     # --- FOTO DE PERFIL: subida y eliminación ---
 
@@ -632,39 +635,3 @@ class JefesContent(QWidget):
             QMessageBox.critical(self, "Error", e)
         ))
         self.assign_w.start()
-
-    def _seleccionar_foto(self):
-        """Abre el selector de archivos y sube la foto seleccionada al Storage."""
-        if not self.supabase_client:
-            QMessageBox.warning(self, "Error", "Sin conexión a Supabase.")
-            return
-
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Seleccionar foto de perfil",
-            "",
-            "Imágenes (*.jpg *.jpeg *.png *.webp)"
-        )
-        if not file_path:
-            return
-
-        self.btn_upload_foto.setEnabled(False)
-        self.btn_upload_foto.setText("Subiendo foto...")
-
-        self._w_upload = UploadFotoPerfilWorker(
-            self.supabase_client, file_path, subfolder="supervisores"
-        )
-        self._w_upload.success.connect(self._on_foto_subida)
-        self._w_upload.error.connect(self._on_foto_error)
-        self._w_upload.start()
-
-    def _on_foto_subida(self, url: str):
-        self.btn_upload_foto.setEnabled(True)
-        self.btn_upload_foto.setText("📁  Seleccionar foto desde dispositivo")
-        self.txt_foto_url.setText(url)  # actualiza campo URL y dispara preview
-        QMessageBox.information(self, "Foto subida", "Foto subida exitosamente.\nRecuerde guardar los cambios para vincularla al perfil.")
-
-    def _on_foto_error(self, err: str):
-        self.btn_upload_foto.setEnabled(True)
-        self.btn_upload_foto.setText("📁  Seleccionar foto desde dispositivo")
-        QMessageBox.critical(self, "Error al subir foto", err)

@@ -3,7 +3,7 @@ Módulo de versión centralizado para GryPhus Conect Gerencia.
 Define la versión actual de la aplicación y el endpoint de GitHub Releases para actualizaciones.
 """
 
-__version__ = "1.1.7"
+__version__ = "1.1.8"
 APP_NAME = "GryPhus Conect Gerencia"
 APP_ORGANIZATION = "Gryphus Systems"
 APP_USER_MODEL_ID = f"GryphusSystems.GryPhusConectGerencia.{__version__}"

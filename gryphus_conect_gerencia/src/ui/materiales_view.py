@@ -197,7 +197,7 @@ class MaterialesContent(QWidget):
         self.lbl_detail_title = QLabel("Detalle del Material")
         self.lbl_detail_title.setStyleSheet("font-size: 19px; font-weight: 800; color: #1F2421; background: transparent;")
         
-        self.btn_edit = QPushButton("️ Editar Material")
+        self.btn_edit = QPushButton("Editar Material")
         self.btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_edit.setStyleSheet("""
             QPushButton {
@@ -326,7 +326,7 @@ class MaterialesContent(QWidget):
         self.btn_cancel.setStyleSheet("background-color: #262B29; color: white; border-radius: 6px; padding: 9px 16px; font-weight: 600;")
         self.btn_cancel.clicked.connect(self.cancelar_edicion)
 
-        self.btn_delete = QPushButton("️ Eliminar Material")
+        self.btn_delete = QPushButton("Eliminar Material")
         self.btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_delete.setStyleSheet("QPushButton { color: #DC2626; border: 1px solid #DC2626; border-radius: 6px; padding: 8px 14px; background: transparent; font-weight: 600; } QPushButton:hover { background: #FEF2F2; }")
         self.btn_delete.clicked.connect(self.eliminar_material)
@@ -406,10 +406,26 @@ class MaterialesContent(QWidget):
         self.materiales_data = data
         self.filtrar_tabla()
 
+    @staticmethod
+    def _normalize_unidad(u: str) -> str:
+        u = (u or "").strip().lower()
+        mapping = {
+            "tinetas": "tineta",
+            "sacos": "saco",
+            "litros": "litro",
+            "unidades": "unidad",
+            "un": "unidad",
+            "m²": "m2",
+            "m³": "m3",
+            "kilos": "kg",
+        }
+        return mapping.get(u, u)
+
     def filtrar_tabla(self):
         query = self.txt_search.text().strip().lower()
         unidad_filtro = self.combo_filter_unidad.currentData() or self.combo_filter_unidad.currentText()
         if unidad_filtro == "Todas las Unidades": unidad_filtro = ""
+        norm_filtro = self._normalize_unidad(unidad_filtro)
 
         filtered = []
         for mat in self.materiales_data:
@@ -418,7 +434,7 @@ class MaterialesContent(QWidget):
             unidad = str(mat.get("unidad_medida", ""))
 
             match_text = (not query) or (query in nombre) or (query in desc)
-            match_unidad = (not unidad_filtro) or (unidad.lower() == unidad_filtro.lower())
+            match_unidad = (not norm_filtro) or (self._normalize_unidad(unidad) == norm_filtro)
 
             if match_text and match_unidad:
                 filtered.append(mat)
@@ -646,9 +662,10 @@ class MaterialesContent(QWidget):
             row_layout.addWidget(btn_open)
 
             if self.is_editing:
-                btn_del = QPushButton("")
+                btn_del = QPushButton("✕")
+                btn_del.setToolTip("Eliminar estudio")
                 btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
-                btn_del.setStyleSheet("background: transparent; color: #EF4444; border: none; font-weight: bold;")
+                btn_del.setStyleSheet("background: transparent; color: #EF4444; border: none; font-weight: bold; padding: 2px 6px;")
                 btn_del.clicked.connect(lambda _, i=idx: self.eliminar_estudio_item(i))
                 row_layout.addWidget(btn_del)
 

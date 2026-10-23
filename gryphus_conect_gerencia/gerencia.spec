@@ -103,7 +103,9 @@ a.binaries = [x for x in a.binaries if not any(b.lower() in x[0].lower() for b i
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-icon_file = os.path.join(base_path, 'assets', 'app_icon.ico')
+icon_file = os.path.join(base_path, 'assets', 'gryphus_conect_icon.ico')
+if not os.path.exists(icon_file):
+    icon_file = os.path.join(base_path, 'assets', 'app_icon.ico')
 if not os.path.exists(icon_file):
     icon_file = None
 

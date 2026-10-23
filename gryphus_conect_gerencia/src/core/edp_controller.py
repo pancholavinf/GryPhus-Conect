@@ -145,9 +145,14 @@ class EDPController:
 
                 # Filtrar por fecha si se especificó
                 if periodo_desde:
-                    query = query.gte('fecha_captura_local', str(periodo_desde))
+                    query = query.gte('fecha_captura_local', str(periodo_desde)[:10])
                 if periodo_hasta:
-                    query = query.lte('fecha_captura_local', str(periodo_hasta) + " 23:59:59")
+                    try:
+                        hasta_date = datetime.date.fromisoformat(str(periodo_hasta)[:10])
+                        next_day = (hasta_date + datetime.timedelta(days=1)).isoformat()
+                        query = query.lt('fecha_captura_local', next_day)
+                    except ValueError:
+                        query = query.lte('fecha_captura_local', str(periodo_hasta) + "T23:59:59.999999Z")
 
                 res_pend = query.execute()
                 avances_pendientes_raw.extend(res_pend.data or [])
@@ -185,11 +190,11 @@ class EDPController:
 
             desc = " — ".join(desc_parts)
 
-            # Cantidades de contrato
+            # Cantidades de contrato (en m² de área expuesta, con fallback a cantidad)
             q_contrato = float(
-                item.get('cantidad') or
                 item.get('area_expuesta_m2') or
-                1.0
+                item.get('cantidad') or
+                0.0
             )
             pu = float(
                 item.get('precio_unitario_contrato') or
@@ -330,6 +335,12 @@ class EDPController:
                     .update({'estado_pago_id': edp_id}) \
                     .in_('id', chunk) \
                     .execute()
+
+            try:
+                from src.core.data_manager import DataManager
+                DataManager(self.supabase).invalidate_obra_details(obra_id)
+            except Exception:
+                pass
 
             # ── 6. Generar archivo PDF local ────────────────────────────────
             docs_dir = Path(__file__).resolve().parents[2] / "documentos_edp"

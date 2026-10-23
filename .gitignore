@@ -16,6 +16,7 @@ build/
 dist/
 dist_installer/
 *.spec.bak
+gryphus_conect_gerencia/documentos_edp/
 
 # Variables de entorno y secretos
 .env

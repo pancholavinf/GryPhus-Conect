@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QDateEdit, QDoubleSpinBox, QSplitter, QAbstractItemView,
     QProgressBar
 )
-from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtCore import Qt, QDate, pyqtSignal
 from PyQt6.QtGui import QColor, QFont
 from src.core.edp_controller import EDPController
 from src.core.workers import FetchEDPHistorialWorker, EmitEDPWorker
@@ -265,6 +265,8 @@ class EmisionEDPDialog(QDialog):
 # =============================================================================
 
 class EDPTab(QWidget):
+    edp_emitido = pyqtSignal()
+
     def __init__(self, supabase_client=None, obra_id=None, user_id=None):
         super().__init__()
         self.supabase  = supabase_client
@@ -317,7 +319,7 @@ class EDPTab(QWidget):
         actions_layout.addWidget(QLabel("<b>Período Desde:</b>"))
         self.date_desde = QDateEdit()
         self.date_desde.setCalendarPopup(True)
-        self.date_desde.setDate(QDate.currentDate().addDays(-30))
+        self.date_desde.setDate(QDate.currentDate().addYears(-1))
         actions_layout.addWidget(self.date_desde)
 
         actions_layout.addWidget(QLabel("<b>Hasta:</b>"))
@@ -553,6 +555,7 @@ class EDPTab(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Recargar para actualizar historial y KPIs
             self.cargar_datos()
+            self.edp_emitido.emit()
 
     # ------------------------------------------------------------------
     # ABRIR PDF

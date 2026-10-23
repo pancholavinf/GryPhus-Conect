@@ -216,6 +216,7 @@ class AvancesContent(QWidget):
                 obra_id=self.obra_data.get('id'),
                 user_id=self.user_id
             )
+            self.tab_edp.edp_emitido.connect(lambda: self.cargar_datos(force_refresh=True))
             self.tabs.removeTab(4)
             self.tabs.insertTab(4, self.tab_edp, "Estados de Pago")
             self.tabs.setCurrentIndex(4)
@@ -1078,11 +1079,12 @@ class AvancesContent(QWidget):
 
         sidebar_layout.addWidget(self.meta_box)
 
-        # Botón de Acción: Aprobar Avance Seleccionado (debajo de los detalles)
+        # Botones de Acción: Aprobar / Rechazar Avance Seleccionado (debajo de los detalles)
         self.action_box = QFrame()
         self.action_box.setStyleSheet("background-color: #FFFFFF; color: #1F2421; border: 1px solid #D8D5CD; border-radius: 6px;")
-        action_layout = QVBoxLayout(self.action_box)
+        action_layout = QHBoxLayout(self.action_box)
         action_layout.setContentsMargins(10, 10, 10, 10)
+        action_layout.setSpacing(8)
 
         self.btn_aprobar_avance = QPushButton("Aprobar Avance")
         self.btn_aprobar_avance.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1094,6 +1096,17 @@ class AvancesContent(QWidget):
         )
         self.btn_aprobar_avance.clicked.connect(self.aprobar_avance_seleccionado)
         action_layout.addWidget(self.btn_aprobar_avance)
+
+        self.btn_rechazar_avance = QPushButton("Rechazar")
+        self.btn_rechazar_avance.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_rechazar_avance.setEnabled(False)
+        self.btn_rechazar_avance.setStyleSheet(
+            "QPushButton { background-color: #DC2626; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
+            "QPushButton:hover { background-color: #B91C1C; } "
+            "QPushButton:disabled { background-color: #D8D5CD; color: #262B29; }"
+        )
+        self.btn_rechazar_avance.clicked.connect(self.rechazar_avance_seleccionado)
+        action_layout.addWidget(self.btn_rechazar_avance)
 
         sidebar_layout.addWidget(self.action_box)
         sidebar_layout.addStretch()
@@ -1178,8 +1191,8 @@ class AvancesContent(QWidget):
         total_executed_pending = 0.0
 
         for item in self.items:
-            qty = item.get("cantidad", 0.0) or 0.0
-            price = item.get("precio_unitario_contrato", 0.0) or 0.0
+            qty = float(item.get("area_expuesta_m2") or item.get("cantidad") or 0.0)
+            price = float(item.get("precio_unitario_contrato") or 0.0)
             total_budget += qty * price
 
         for av in self.avances:
@@ -1349,10 +1362,11 @@ class AvancesContent(QWidget):
         }
         db_key = db_field_map.get(group_field, "ubicacion")
 
-        # Gather all categories from cubicacion items
-        all_cats = sorted(set((item.get(db_key) or "Sin Asignar") for item in self.items)) or ["Sin Asignar"]
-        # Limit to top 10 most active categories
-        all_cats = all_cats[:10]
+        # Gather all categories from cubicacion items and advances
+        cats_set = {(item.get(db_key) or "Sin Asignar") for item in self.items}
+        for av in self.avances:
+            cats_set.add(av.get(f"item_{db_key}") or "Sin Asignar")
+        all_cats = sorted(cats_set) or ["Sin Asignar"]
 
         estado_colors = {
             "aprobado":  "#2E6F40",
@@ -1373,8 +1387,10 @@ class AvancesContent(QWidget):
             qty = float(av.get("cantidad") or 0.0)
             cat_estado_qty[cat][estado] += qty
 
-        # Only show categories that have at least one avance
+        # Only show categories that have at least one avance, sorted by most active (top 10)
         active_cats = [c for c in all_cats if sum(cat_estado_qty[c].values()) > 0]
+        active_cats.sort(key=lambda c: sum(cat_estado_qty[c].values()), reverse=True)
+        active_cats = active_cats[:10]
         if not active_cats:
             self.canvas_category.axes.text(
                 0.5, 0.5, "No hay avances registrados\npara las categorías de esta obra",
@@ -1531,6 +1547,13 @@ class AvancesContent(QWidget):
                 "QPushButton { background-color: #3D523C; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
                 "QPushButton:disabled { background-color: #D8D5CD; color: #262B29; }"
             )
+        if hasattr(self, 'btn_rechazar_avance'):
+            self.btn_rechazar_avance.setText("Rechazar")
+            self.btn_rechazar_avance.setEnabled(False)
+            self.btn_rechazar_avance.setStyleSheet(
+                "QPushButton { background-color: #DC2626; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
+                "QPushButton:disabled { background-color: #D8D5CD; color: #262B29; }"
+            )
 
     def on_row_selected(self):
         try:
@@ -1539,6 +1562,9 @@ class AvancesContent(QWidget):
                 if hasattr(self, 'btn_aprobar_avance'):
                     self.btn_aprobar_avance.setEnabled(False)
                     self.btn_aprobar_avance.setText("Aprobar Avance")
+                if hasattr(self, 'btn_rechazar_avance'):
+                    self.btn_rechazar_avance.setEnabled(False)
+                    self.btn_rechazar_avance.setText("Rechazar")
                 return
 
             row = selected_ranges[0].topRow()
@@ -1579,24 +1605,51 @@ class AvancesContent(QWidget):
                 qty_total = float(avance.get("item_cantidad_total") or 0.0)
             except (ValueError, TypeError):
                 qty_total = 0.0
-            self.lbl_meta_total_item.setText(f"<b>Cant. Contrato:</b> {qty_total:g}")
+            self.lbl_meta_total_item.setText(f"<b>Cant. Contrato:</b> {qty_total:,.2f} m²")
             
             try:
                 price = float(avance.get("item_precio_unitario") or 0.0)
             except (ValueError, TypeError):
                 price = 0.0
-            self.lbl_meta_valor.setText(f"<b>Precio Unitario:</b> $ {price:,.0f}")
+            self.lbl_meta_valor.setText(f"<b>Precio Unitario (m²):</b> $ {price:,.0f}")
 
             # Update Comment
             self.comment_display.setText(avance.get("comentario") or "Sin comentario.")
 
-            # Update Approval Button State
+            # Update Approval / Rejection Button State
+            is_cobrado = bool(avance.get("estado_pago_id"))
             estado_rev = str(avance.get("estado_revision", "pendiente")).lower()
-            if estado_rev == "aprobado":
+            if is_cobrado:
+                self.btn_aprobar_avance.setText("Cobrado en EDP")
+                self.btn_aprobar_avance.setEnabled(False)
+                self.btn_aprobar_avance.setStyleSheet(
+                    "QPushButton { background-color: #D1FAE5; color: #2F402E; font-weight: bold; border: 1px solid #2E6F40; border-radius: 6px; padding: 10px 14px; font-size: 13px; }"
+                )
+                self.btn_rechazar_avance.setText("Cobrado")
+                self.btn_rechazar_avance.setEnabled(False)
+            elif estado_rev == "aprobado":
                 self.btn_aprobar_avance.setText("Avance Aprobado")
                 self.btn_aprobar_avance.setEnabled(False)
                 self.btn_aprobar_avance.setStyleSheet(
                     "QPushButton { background-color: #D1FAE5; color: #2F402E; font-weight: bold; border: 1px solid #2E6F40; border-radius: 6px; padding: 10px 14px; font-size: 13px; }"
+                )
+                self.btn_rechazar_avance.setText("Rechazar")
+                self.btn_rechazar_avance.setEnabled(True)
+                self.btn_rechazar_avance.setStyleSheet(
+                    "QPushButton { background-color: #DC2626; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
+                    "QPushButton:hover { background-color: #B91C1C; }"
+                )
+            elif estado_rev == "rechazado":
+                self.btn_aprobar_avance.setText("Aprobar Avance")
+                self.btn_aprobar_avance.setEnabled(True)
+                self.btn_aprobar_avance.setStyleSheet(
+                    "QPushButton { background-color: #3D523C; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
+                    "QPushButton:hover { background-color: #476386; }"
+                )
+                self.btn_rechazar_avance.setText("Rechazado")
+                self.btn_rechazar_avance.setEnabled(False)
+                self.btn_rechazar_avance.setStyleSheet(
+                    "QPushButton { background-color: #FEE2E2; color: #DC2626; font-weight: bold; border: 1px solid #DC2626; border-radius: 6px; padding: 10px 14px; font-size: 13px; }"
                 )
             else:
                 self.btn_aprobar_avance.setText("Aprobar Avance")
@@ -1604,6 +1657,12 @@ class AvancesContent(QWidget):
                 self.btn_aprobar_avance.setStyleSheet(
                     "QPushButton { background-color: #3D523C; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
                     "QPushButton:hover { background-color: #476386; }"
+                )
+                self.btn_rechazar_avance.setText("Rechazar")
+                self.btn_rechazar_avance.setEnabled(True)
+                self.btn_rechazar_avance.setStyleSheet(
+                    "QPushButton { background-color: #DC2626; color: #FFFFFF; font-weight: bold; border: none; border-radius: 6px; padding: 10px 14px; font-size: 13px; } "
+                    "QPushButton:hover { background-color: #B91C1C; }"
                 )
 
             # Load image
@@ -1640,8 +1699,50 @@ class AvancesContent(QWidget):
 
         self.btn_aprobar_avance.setEnabled(False)
         self.btn_aprobar_avance.setText("Aprobando...")
+        if hasattr(self, 'btn_rechazar_avance'):
+            self.btn_rechazar_avance.setEnabled(False)
 
         self.worker_update = UpdateAvanceStatusWorker(self.supabase, [avance_id], "aprobado")
+        self.worker_update.success.connect(self.on_aprobar_avance_success)
+        self.worker_update.error.connect(self.on_aprobar_error)
+        self.worker_update.start()
+
+    def rechazar_avance_seleccionado(self):
+        selected_ranges = self.table.selectedRanges()
+        if not selected_ranges:
+            return
+        row = selected_ranges[0].topRow()
+        if row < 0 or row >= len(self.filtered_avances):
+            return
+
+        avance = self.filtered_avances[row]
+        avance_id = avance.get("id")
+        if not avance_id:
+            return
+
+        if avance.get("estado_pago_id"):
+            QMessageBox.warning(self, "Avance Cobrado", "No se puede rechazar un avance que ya fue incluido en un Estado de Pago.")
+            return
+
+        if not self.supabase:
+            QMessageBox.warning(self, "Error", "Cliente Supabase no configurado.")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Rechazar Avance",
+            "¿Está seguro de que desea rechazar este avance?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.btn_rechazar_avance.setEnabled(False)
+        self.btn_rechazar_avance.setText("Rechazando...")
+        self.btn_aprobar_avance.setEnabled(False)
+
+        self.worker_update = UpdateAvanceStatusWorker(self.supabase, [avance_id], "rechazado")
         self.worker_update.success.connect(self.on_aprobar_avance_success)
         self.worker_update.error.connect(self.on_aprobar_error)
         self.worker_update.start()
@@ -1654,11 +1755,20 @@ class AvancesContent(QWidget):
 
         self.aplicar_filtros()
         self.aplicar_filtros_items()
-        self.btn_aprobar_avance.setText("Avance Aprobado")
-        self.btn_aprobar_avance.setEnabled(False)
-        self.btn_aprobar_avance.setStyleSheet(
-            "QPushButton { background-color: #D1FAE5; color: #2F402E; font-weight: bold; border: 1px solid #2E6F40; border-radius: 6px; padding: 10px 14px; font-size: 13px; }"
-        )
+        self.calcular_estadisticas()
+
+        if nuevo_estado == "aprobado":
+            self.btn_aprobar_avance.setText("Avance Aprobado")
+            self.btn_aprobar_avance.setEnabled(False)
+            self.btn_aprobar_avance.setStyleSheet(
+                "QPushButton { background-color: #D1FAE5; color: #2F402E; font-weight: bold; border: 1px solid #2E6F40; border-radius: 6px; padding: 10px 14px; font-size: 13px; }"
+            )
+        elif nuevo_estado == "rechazado":
+            self.btn_rechazar_avance.setText("Rechazado")
+            self.btn_rechazar_avance.setEnabled(False)
+            self.btn_rechazar_avance.setStyleSheet(
+                "QPushButton { background-color: #FEE2E2; color: #DC2626; font-weight: bold; border: 1px solid #DC2626; border-radius: 6px; padding: 10px 14px; font-size: 13px; }"
+            )
         # Refrescar el tab EDP para actualizar el contador de avances pendientes
         if hasattr(self, 'tab_edp') and self.tab_edp is not None:
             self.tab_edp.cargar_datos()
@@ -1668,9 +1778,9 @@ class AvancesContent(QWidget):
             QMessageBox.information(self, "Sin Avances", "No hay avances para aprobar.")
             return
 
-        pendientes = [av for av in self.filtered_avances if str(av.get("estado_revision")).lower() != "aprobado"]
+        pendientes = [av for av in self.filtered_avances if str(av.get("estado_revision")).lower() == "pendiente"]
         if not pendientes:
-            QMessageBox.information(self, "Información", "Todos los avances mostrados ya se encuentran aprobados.")
+            QMessageBox.information(self, "Información", "No hay avances pendientes de revisión en la vista actual.")
             return
 
         reply = QMessageBox.question(
@@ -1707,6 +1817,7 @@ class AvancesContent(QWidget):
 
         self.aplicar_filtros()
         self.aplicar_filtros_items()
+        self.calcular_estadisticas()
 
         # Refrescar el tab EDP para que los KPIs reflejen los nuevos avances aprobados
         if hasattr(self, 'tab_edp') and self.tab_edp is not None:
@@ -1720,7 +1831,10 @@ class AvancesContent(QWidget):
         if hasattr(self, 'btn_aprobar_avance'):
             self.btn_aprobar_avance.setEnabled(True)
             self.btn_aprobar_avance.setText("Aprobar Avance")
-        QMessageBox.critical(self, "Error al Aprobar", message)
+        if hasattr(self, 'btn_rechazar_avance'):
+            self.btn_rechazar_avance.setEnabled(True)
+            self.btn_rechazar_avance.setText("Rechazar")
+        QMessageBox.critical(self, "Error al Actualizar Avance", message)
 
     def on_image_downloaded(self, data):
         try:

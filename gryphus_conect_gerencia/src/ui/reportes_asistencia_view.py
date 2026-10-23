@@ -310,7 +310,12 @@ class ReportesAsistenciaContent(QWidget):
         ws.cell(row=total_row, column=7, value=float(self._report_summary.get("total_pago", 0))).font = Font(bold=True)
 
         for col in range(1, 8):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(col)].auto_size = True
+            col_letter = openpyxl.utils.get_column_letter(col)
+            max_len = max(
+                (len(str(ws.cell(row=r, column=col).value or "")) for r in range(4, total_row + 1)),
+                default=12
+            )
+            ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
 
         wb.save(path)
         QMessageBox.information(self, "Éxito", f"Reporte exportado exitosamente:\n{path}")
