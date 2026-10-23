@@ -34,20 +34,20 @@ class NumberedCanvas(canvas.Canvas):
         if self._pageNumber == 1:
             self.saveState()
             # Top primary bar
-            self.setFillColor(colors.HexColor("#F3A500"))
+            self.setFillColor(colors.HexColor("#3D523C"))
             self.rect(0, 772, 612, 20, stroke=0, fill=1)
             # Bottom bar
-            self.setFillColor(colors.HexColor("#2D3033"))
+            self.setFillColor(colors.HexColor("#262B29"))
             self.rect(0, 0, 612, 30, stroke=0, fill=1)
             self.restoreState()
             return
 
         self.saveState()
         self.setFont("Helvetica-Bold", 8)
-        self.setFillColor(colors.HexColor("#2D3033"))
+        self.setFillColor(colors.HexColor("#262B29"))
         
         # Header
-        self.drawString(54, 752, "TRABS")
+        self.drawString(54, 752, "GRYPHUS CONECT")
         self.setFont("Helvetica", 8)
         self.setFillColor(colors.HexColor("#4A5156"))
         self.drawRightString(558, 752, "Documento Maestro: PRD y Sistema de Diseño")
@@ -62,7 +62,7 @@ class NumberedCanvas(canvas.Canvas):
         
         # Footer text
         self.setFont("Helvetica", 8)
-        self.drawString(54, 40, "Confidencial - Propiedad de Trabs")
+        self.drawString(54, 40, "Confidencial - Propiedad de GryPhus Conect")
         page_text = f"Página {self._pageNumber} de {page_count}"
         self.drawRightString(558, 40, page_text)
         
@@ -80,11 +80,11 @@ def create_prd_report(output_pdf_path, logo_path):
 
     styles = getSampleStyleSheet()
     
-    primary_color = colors.HexColor("#2D3033")
-    accent_color = colors.HexColor("#F3A500")
-    secondary_color = colors.HexColor("#F3A500")
+    primary_color = colors.HexColor("#262B29")
+    accent_color = colors.HexColor("#3D523C")
+    secondary_color = colors.HexColor("#3D523C")
     neutral_color = colors.HexColor("#808A92")
-    dark_slate = colors.HexColor("#2D3033")
+    dark_slate = colors.HexColor("#262B29")
     body_text_color = colors.HexColor("#1F2115")
     
     styles['Normal'].textColor = body_text_color
@@ -215,15 +215,15 @@ def create_prd_report(output_pdf_path, logo_path):
         story.append(Spacer(1, 100))
 
     story.append(Paragraph("DOCUMENTO MAESTRO: PRD Y SISTEMA DE DISEÑO", title_style))
-    story.append(Paragraph("Especificaciones del Producto, Casos de Uso y Sistema Visual (Design System)<br/><b>TRABS</b>", subtitle_style))
+    story.append(Paragraph("Especificaciones del Producto, Casos de Uso y Sistema Visual (Design System)<br/><b>GRYPHUS CONECT</b>", subtitle_style))
     
     story.append(Spacer(1, 60))
     
     metadata_text = """
-    <b>Empresa:</b> Trabs<br/>
+    <b>Empresa:</b> GryPhus Conect<br/>
     <b>Fecha de Emisión:</b> Agosto 2026<br/>
     <b>Estado del Documento:</b> Especificación Oficial / Operativo E2E<br/>
-    <b>Autor:</b> Antigravity Coding Assistant & Trabs Dev Team<br/>
+    <b>Autor:</b> Antigravity Coding Assistant & GryPhus Conect Dev Team<br/>
     <b>Alcance:</b> Suite Gerencial PyQt6 (Desktop) y App Terreno React Native Expo (Mobile)
     """
     story.append(Paragraph(metadata_text, meta_style))
@@ -313,10 +313,10 @@ def create_prd_report(output_pdf_path, logo_path):
     story.append(Paragraph("PARTE 1: DOCUMENTO DE REQUISITOS DEL PRODUCTO (PRD)", h1_style))
     story.append(Paragraph("1. Resumen Ejecutivo y Objetivos Core", h2_style))
     story.append(Paragraph(
-        "<b>Trabs</b> es un ecosistema de software multiplataforma diseñado para centralizar y digitalizar el "
+        "<b>GryPhus Conect</b> es un ecosistema de software multiplataforma diseñado para centralizar y digitalizar el "
         "control de avances en proyectos de construcción especializadas (protección pasiva contra incendios, "
         "recubrimientos intumescentes, morteros ignífugos, aislación acústica y sellos de pasadas). "
-        "El nombre 'Trabs' proviene del término en latín para 'viga', simbolizando solidez estructural y soporte técnico. "
+        "El nombre 'GryPhus Conect' proviene del término en latín para 'viga', simbolizando solidez estructural y soporte técnico. "
         "El objetivo principal es resolver la fragmentación del registro de avances en terreno, eliminar la duplicación "
         "de digitación técnica y automatizar la facturación inmutable mediante Estados de Pago (EDP).",
         body_style
@@ -332,12 +332,12 @@ def create_prd_report(output_pdf_path, logo_path):
         [Paragraph("<b>Rol</b>", table_header_style), Paragraph("<b>Módulo Asignado</b>", table_header_style), Paragraph("<b>Funcionalidades Clave y Alcance</b>", table_header_style)],
         [
             Paragraph("Gerencia / Admin", table_cell_bold_style),
-            Paragraph("Trabs Gerencia<br/>(Desktop PyQt6)", table_cell_style),
+            Paragraph("GryPhus Conect Gerencia<br/>(Desktop PyQt6)", table_cell_style),
             Paragraph("• Ingesta inicial de partidas y cubicaciones desde Excel.<br/>• Asignación y gestión de Jefes de Obra.<br/>• Control de personal y asistencia.<br/>• Catálogo de materiales por obra.<br/>• Auditoría fotográfica y aprobación de avances.<br/>• Generación inmutable de Estados de Pago (EDP).", table_cell_style)
         ],
         [
             Paragraph("Jefe de Obra / Faena", table_cell_bold_style),
-            Paragraph("Trabs Terreno<br/>(Mobile React Native)", table_cell_style),
+            Paragraph("GryPhus Conect Terreno<br/>(Mobile React Native)", table_cell_style),
             Paragraph("• Captura offline de avances por cuadrícula y partida.<br/>• Registro de asistencia de personal (presentes/ausentes).<br/>• Bitácora diaria y reporte de novedades/incidentes.<br/>• Solicitud y registro de consumo de materiales.<br/>• Sincronización automática al recuperar red.", table_cell_style)
         ]
     ]
@@ -400,19 +400,19 @@ def create_prd_report(output_pdf_path, logo_path):
     story.append(Paragraph("PARTE 2: MANUAL DE ESTILOS Y SISTEMA DE DISEÑO (DESIGN SYSTEM)", h1_style))
     story.append(Paragraph("1. Identidad de Marca y DNA Visual", h2_style))
     story.append(Paragraph(
-        "El sistema visual de <b>Trabs</b> combina robustez estructural industrial con claridad ejecutiva. "
-        "Su estética se fundamenta en un contraste equilibrado entre el tono <b>Antracita Oscuro (#2D3033)</b>, "
-        "el distintivo <b>Ámbar Dorado (#F3A500)</b> como acento de marca y CTA, y una escala de neutros técnicos "
+        "El sistema visual de <b>GryPhus Conect</b> combina robustez estructural industrial con claridad ejecutiva. "
+        "Su estética se fundamenta en un contraste equilibrado entre el tono <b>Antracita Oscuro (#262B29)</b>, "
+        "el distintivo <b>Ámbar Dorado (#3D523C)</b> como acento de marca y CTA, y una escala de neutros técnicos "
         "<b>(#808A92, #414445, #4A5156)</b> sobre un fondo de alta legibilidad <b>(#F4F6F8)</b>.",
         body_style
     ))
 
-    story.append(Paragraph("2. Paleta de Colores Curada Trabs (Design Tokens)", h2_style))
+    story.append(Paragraph("2. Paleta de Colores Curada GryPhus Conect (Design Tokens)", h2_style))
     
     color_tokens_data = [
         [Paragraph("<b>Rol / Token</b>", table_header_style), Paragraph("<b>Nombre del Color</b>", table_header_style), Paragraph("<b>Hex</b>", table_header_style), Paragraph("<b>Uso en Interfaz</b>", table_header_style)],
-        [Paragraph("Primary / CTA", table_cell_bold_style), Paragraph("Ámbar Solar", table_cell_style), Paragraph("<code>#F3A500</code>", table_cell_style), Paragraph("Botones de acción principal, acento de marca, progreso y destacados.", table_cell_style)],
-        [Paragraph("Dark Surface", table_cell_bold_style), Paragraph("Antracita Oscuro", table_cell_style), Paragraph("<code>#2D3033</code>", table_cell_style), Paragraph("Fondo de barra lateral (Sidebar), cabeceras de tablas y modales.", table_cell_style)],
+        [Paragraph("Primary / CTA", table_cell_bold_style), Paragraph("Ámbar Solar", table_cell_style), Paragraph("<code>#3D523C</code>", table_cell_style), Paragraph("Botones de acción principal, acento de marca, progreso y destacados.", table_cell_style)],
+        [Paragraph("Dark Surface", table_cell_bold_style), Paragraph("Antracita Oscuro", table_cell_style), Paragraph("<code>#262B29</code>", table_cell_style), Paragraph("Fondo de barra lateral (Sidebar), cabeceras de tablas y modales.", table_cell_style)],
         [Paragraph("Neutral / Border", table_cell_bold_style), Paragraph("Gris Acero", table_cell_style), Paragraph("<code>#808A92</code>", table_cell_style), Paragraph("Bordes de tarjetas, rejillas de tablas, subtítulos y textos secundarios.", table_cell_style)],
         [Paragraph("Secondary Dark", table_cell_bold_style), Paragraph("Carbón Pizarra", table_cell_style), Paragraph("<code>#414445</code>", table_cell_style), Paragraph("Fondos oscuros secundarios y separadores de sección.", table_cell_style)],
         [Paragraph("Slate Medium", table_cell_bold_style), Paragraph("Pizarra Medio", table_cell_style), Paragraph("<code>#4A5156</code>", table_cell_style), Paragraph("Iconografía secundaria, badges de estado y acentos de navegación.", table_cell_style)],
@@ -443,7 +443,7 @@ def create_prd_report(output_pdf_path, logo_path):
 
     story.append(Spacer(1, 10))
     story.append(Paragraph("4. Especificaciones UI/UX por Componente", h2_style))
-    story.append(Paragraph("<b>Barra Lateral (`#Sidebar`)</b>: Ancho estático 250px en Antracita Oscuro (`#2D3033`) con sombra proyectada. Logo institucional `logo_trabs_nombre_sf.png` y botones con hover interactivo y selección con acento ámbar (`#F3A500`).", bullet_style))
+    story.append(Paragraph("<b>Barra Lateral (`#Sidebar`)</b>: Ancho estático 250px en Antracita Oscuro (`#262B29`) con sombra proyectada. Logo institucional `logo_gryphus_nombre_sf.png` y botones con hover interactivo y selección con acento ámbar (`#3D523C`).", bullet_style))
     story.append(Paragraph("<b>Tarjetas de Obra Clickeables (`ClickableObraCard`)</b>: Bordes redondeados (12px), franja de color lateral de 8px según la paleta de la obra, indicador pulsante de estado operativo y sombra flotante en hover.", bullet_style))
     story.append(Paragraph("<b>Visor de Evidencia de Fotografías</b>: Carga asíncrona de fotografías en panel lateral split (`ImageDownloader`), permitiendo auditar micras/m² ejecutados y aprobar/rechazar con 1 clic.", bullet_style))
     story.append(Paragraph("<b>Modales de Confirmación y Asistentes</b>: Asistentes por pasos para ingesta de Excel y emisión de EDP, deshabilitando botones y mostrando estado (`'Procesando...'`) para evitar doble clic accidental.", bullet_style))
@@ -473,16 +473,16 @@ if __name__ == "__main__":
     output_dir = os.path.join(base_dir, "INFO PROYECTO")
     os.makedirs(output_dir, exist_ok=True)
     
-    output_pdf = os.path.join(output_dir, "PRD y Design System - Trabs.pdf")
-    logo = os.path.join(output_dir, "LOGOS", "logo_trabs_nombre_sf.png")
+    output_pdf = os.path.join(output_dir, "PRD y Design System - GryPhus Conect.pdf")
+    logo = os.path.join(output_dir, "LOGOS", "logo_gryphus_nombre_sf.png")
     if not os.path.exists(logo):
-        logo = os.path.join(output_dir, "LOGOS", "logo_trabs_circular_sf.png")
+        logo = os.path.join(output_dir, "LOGOS", "logo_gryphus_circular_sf.png")
     if not os.path.exists(logo):
         logo = os.path.join(output_dir, "LOGOS", "LOGO_CON_LETRAS.png")
         
     try:
         create_prd_report(output_pdf, logo)
     except PermissionError:
-        output_pdf_alt = os.path.join(output_dir, "PRD y Design System - Trabs_Actualizado.pdf")
+        output_pdf_alt = os.path.join(output_dir, "PRD y Design System - GryPhus Conect_Actualizado.pdf")
         print(f"Advertencia: Guardando en alternativa: {output_pdf_alt}")
         create_prd_report(output_pdf_alt, logo)

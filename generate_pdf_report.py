@@ -36,20 +36,20 @@ class NumberedCanvas(canvas.Canvas):
         if self._pageNumber == 1:
             self.saveState()
             # Top primary color bar
-            self.setFillColor(colors.HexColor("#F3A500"))
+            self.setFillColor(colors.HexColor("#3D523C"))
             self.rect(0, 772, 612, 20, stroke=0, fill=1)
             # Bottom primary color bar
-            self.setFillColor(colors.HexColor("#2D3033"))
+            self.setFillColor(colors.HexColor("#262B29"))
             self.rect(0, 0, 612, 30, stroke=0, fill=1)
             self.restoreState()
             return
 
         self.saveState()
         self.setFont("Helvetica-Bold", 8)
-        self.setFillColor(colors.HexColor("#2D3033"))
+        self.setFillColor(colors.HexColor("#262B29"))
         
         # Header
-        self.drawString(54, 752, "TRABS")
+        self.drawString(54, 752, "GRYPHUS CONECT")
         self.setFont("Helvetica", 8)
         self.setFillColor(colors.HexColor("#4A5156"))
         self.drawRightString(558, 752, "Reporte de Arquitectura y Estado Actual")
@@ -64,7 +64,7 @@ class NumberedCanvas(canvas.Canvas):
         
         # Footer text
         self.setFont("Helvetica", 8)
-        self.drawString(54, 40, "Confidencial - Propiedad de Trabs")
+        self.drawString(54, 40, "Confidencial - Propiedad de GryPhus Conect")
         page_text = f"Página {self._pageNumber} de {page_count}"
         self.drawRightString(558, 40, page_text)
         
@@ -82,10 +82,10 @@ def create_report(output_pdf_path, logo_path):
 
     styles = getSampleStyleSheet()
     
-    primary_color = colors.HexColor("#2D3033")
-    accent_color = colors.HexColor("#F3A500")
-    secondary_color = colors.HexColor("#F3A500")
-    dark_slate = colors.HexColor("#2D3033")
+    primary_color = colors.HexColor("#262B29")
+    accent_color = colors.HexColor("#3D523C")
+    secondary_color = colors.HexColor("#3D523C")
+    dark_slate = colors.HexColor("#262B29")
     body_text_color = colors.HexColor("#1F2115")
     
     styles['Normal'].textColor = body_text_color
@@ -217,15 +217,15 @@ def create_report(output_pdf_path, logo_path):
         story.append(Spacer(1, 100))
         
     story.append(Paragraph("REPORTE DE ARQUITECTURA Y ESTADO ACTUAL", title_style))
-    story.append(Paragraph("Sistema de Control de Obras y Registro de Avances en Terreno<br/><b>TRABS</b>", subtitle_style))
+    story.append(Paragraph("Sistema de Control de Obras y Registro de Avances en Terreno<br/><b>GRYPHUS CONECT</b>", subtitle_style))
     
     story.append(Spacer(1, 60))
     
     metadata_text = """
-    <b>Organización:</b> Trabs<br/>
+    <b>Organización:</b> GryPhus Conect<br/>
     <b>Fecha de Emisión:</b> Agosto 2026<br/>
     <b>Estado del Proyecto:</b> Operativo E2E / Ingesta, Control de Personal, Avances y EDPs Activos<br/>
-    <b>Autor:</b> Antigravity Coding Assistant & Trabs Dev Team<br/>
+    <b>Autor:</b> Antigravity Coding Assistant & GryPhus Conect Dev Team<br/>
     <b>Documento:</b> Arquitectura Técnica y Modelo de Base de Datos (Supabase/Postgres)
     """
     story.append(Paragraph(metadata_text, meta_style))
@@ -286,11 +286,11 @@ def create_report(output_pdf_path, logo_path):
     toc_data = [
         make_toc_row("1. Resumen Ejecutivo del Sistema", 3),
         make_toc_row("2. Conexión a la Base de Datos e Infraestructura", 3),
-        make_toc_row("3. Arquitectura de la Aplicación de Escritorio (accuraop_gerencia)", 4),
+        make_toc_row("3. Arquitectura de la Aplicación de Escritorio (gryphus_conect_gerencia)", 4),
         make_toc_row("Componentes y Módulos Clave", 4, is_sub=True),
         make_toc_row("Mapeo e Ingesta de Datos desde Excel", 4, is_sub=True),
         make_toc_row("Columnas del Excel Mapeadas", 4, is_sub=True),
-        make_toc_row("4. Arquitectura de la Aplicación Móvil (accuraop_terreno)", 5),
+        make_toc_row("4. Arquitectura de la Aplicación Móvil (gryphus_conect_terreno)", 5),
         make_toc_row("Sincronización del Catálogo (Download)", 5, is_sub=True),
         make_toc_row("Mecánica de Registro y Caché (Offline Write)", 5, is_sub=True),
         make_toc_row("Pipeline de Sincronización en Segundo Plano (Upload)", 5, is_sub=True),
@@ -323,7 +323,7 @@ def create_report(output_pdf_path, logo_path):
     # ================= PAGE 3: EXECUTIVE SUMMARY & INFRASTRUCTURE =================
     story.append(Paragraph("1. Resumen Ejecutivo del Sistema", h1_style))
     story.append(Paragraph(
-        "El sistema <b>Trabs</b> es una solución tecnológica integral multiplataforma diseñada "
+        "El sistema <b>GryPhus Conect</b> es una solución tecnológica integral multiplataforma diseñada "
         "para digitalizar y centralizar en tiempo real el control de avances físicos, presupuestos, control de personal "
         "y asistencia, bitácora diaria de faena y la emisión inmutable de Estados de Pago (EDP) en obras de construcción especializadas. "
         "La arquitectura del sistema está basada en un backend centralizado en <b>Supabase</b> (PostgreSQL, Auth y Storage) y dos aplicaciones "
@@ -332,7 +332,7 @@ def create_report(output_pdf_path, logo_path):
     ))
     
     story.append(Paragraph(
-        "• <b>Aplicación de Escritorio (Trabs Gerencia):</b> Desarrollada en Python utilizando <b>PyQt6</b>. "
+        "• <b>Aplicación de Escritorio (GryPhus Conect Gerencia):</b> Desarrollada en Python utilizando <b>PyQt6</b>. "
         "Funciona como panel gerencial y de operaciones. Permite la ingesta inicial de presupuestos desde planillas Excel "
         "estructuradas, asignación de Jefes de Obra, administración de materiales y personal (maestros y cargos), monitoreo "
         "visual analítico enriquecido con gráficos de Matplotlib, auditoría de avances con fotografías y facturación/emisión de Estados de Pago (EDP) en PDF.",
@@ -340,7 +340,7 @@ def create_report(output_pdf_path, logo_path):
     ))
     
     story.append(Paragraph(
-        "• <b>Aplicación Móvil (accuraop_terreno):</b> Desarrollada en <b>React Native</b> con <b>Expo SDK 54</b>. "
+        "• <b>Aplicación Móvil (gryphus_conect_terreno):</b> Desarrollada en <b>React Native</b> con <b>Expo SDK 54</b>. "
         "Diseñada para los Jefes de Obra en terreno. Funciona bajo el paradigma <b>Offline-First</b> mediante una base de datos local "
         "<b>SQLite (trackeo.db)</b> y un pipeline de sincronización en segundo plano con Supabase. Permite el registro rápido de avances por m², "
         "captura obligatoria de fotos, bitácora diaria, consumo de insumos y control de asistencia diaria por maestro.",
@@ -385,7 +385,7 @@ def create_report(output_pdf_path, logo_path):
     story.append(PageBreak())
 
     # ================= PAGE 4: DESKTOP APP ARCHITECTURE =================
-    story.append(Paragraph("3. Arquitectura de la Aplicación de Escritorio (accuraop_gerencia)", h1_style))
+    story.append(Paragraph("3. Arquitectura de la Aplicación de Escritorio (gryphus_conect_gerencia)", h1_style))
     story.append(Paragraph(
         "La aplicación de escritorio actúa como el núcleo administrativo de la operación. Está estructurada bajo el "
         "patrón de diseño MVC (Modelo-Vista-Controlador) y desacopla la lógica de interfaz de las llamadas de red.",
@@ -482,7 +482,7 @@ def create_report(output_pdf_path, logo_path):
     story.append(PageBreak())
 
     # ================= PAGE 5: MOBILE APP ARCHITECTURE =================
-    story.append(Paragraph("4. Arquitectura de la Aplicación Móvil (accuraop_terreno)", h1_style))
+    story.append(Paragraph("4. Arquitectura de la Aplicación Móvil (gryphus_conect_terreno)", h1_style))
     story.append(Paragraph(
         "La aplicación móvil está construida sobre <b>React Native</b> con el ecosistema <b>Expo SDK 54</b>. "
         "Su objetivo es la captura en terreno de avances, bitácoras, consumo de materiales y asistencia de maestros bajo el paradigma <b>Offline-First</b>.",
@@ -815,9 +815,9 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
     
     output_pdf = os.path.join(output_dir, "Resumen_Arquitectura_y_Estado_Actual.pdf")
-    logo = os.path.join(output_dir, "LOGOS", "logo_trabs_nombre_sf.png")
+    logo = os.path.join(output_dir, "LOGOS", "logo_gryphus_nombre_sf.png")
     if not os.path.exists(logo):
-        logo = os.path.join(output_dir, "LOGOS", "logo_trabs_circular_sf.png")
+        logo = os.path.join(output_dir, "LOGOS", "logo_gryphus_circular_sf.png")
     if not os.path.exists(logo):
         logo = os.path.join(output_dir, "LOGOS", "LOGO_CON_LETRAS.png")
         

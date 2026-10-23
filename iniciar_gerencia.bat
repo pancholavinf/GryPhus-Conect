@@ -1,11 +1,11 @@
 @echo off
-title Trabs Gerencia - Control de Obras
+title GryPhus Conect Gerencia - Control de Obras
 echo ====================================================
-echo   Iniciando Trabs Gerencia (accuraop_gerencia)...
+echo   Iniciando GryPhus Conect Gerencia (gryphus_conect_gerencia)...
 echo ====================================================
 cd /d "%~dp0"
 call .venv\Scripts\activate.bat
-cd accuraop_gerencia
+cd gryphus_conect_gerencia
 python main.py
 if %ERRORLEVEL% NEQ 0 (
     echo.

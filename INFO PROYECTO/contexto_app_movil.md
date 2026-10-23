@@ -1,9 +1,9 @@
-# 📱 Contexto Técnico de la Aplicación Móvil: Trabs Terreno (`accuraop_terreno`)
+# 📱 Contexto Técnico de la Aplicación Móvil: GryPhus Conect Terreno (`gryphus_conect_terreno`)
 
-**Organización**: Accuratek  
+**Organización**: Gryphus Systems  
 **Fecha de Actualización**: Agosto 2026  
-**Módulo**: Aplicación Móvil de Captura y Supervisión en Faena (`accuraop_terreno`)  
-**Ecosistema**: Trabs — Control Operativo de Protección Pasiva y Obra  
+**Módulo**: Aplicación Móvil de Captura y Supervisión en Faena (`gryphus_conect_terreno`)  
+**Ecosistema**: GryPhus Conect — Control Operativo de Protección Pasiva y Obra  
 **Documento**: Arquitectura Técnica, Motor Offline-First, Pipeline de Sincronización, Pantallas y Test Suite
 
 ---
@@ -26,21 +26,21 @@
 ## 📂 2. Estructura de Directorios Completa
 
 ```text
-accuraop_terreno/
+gryphus_conect_terreno/
 ├── App.js                           # Contenedor raíz, carga de fuentes, verificación de sesión, navegación y ciclo de vida de sync
 ├── app.json                         # Configuración de Expo (nombre, bundle id, splash, orientaciones)
 ├── package.json                     # Dependencias y scripts de ejecución
 ├── babel.config.js / metro.config.js # Configuración del empaquetador Metro y plugins de Babel
 ├── eas.json                         # Configuración de compilación en la nube para Expo Application Services
 ├── .env                             # Variables de entorno seguras (EXPO_PUBLIC_SUPABASE_URL, etc.)
-├── assets/                          # Logotipos Trabs, splash screen, iconos adaptativos y sprites UI
+├── assets/                          # Logotipos GryPhus Conect, splash screen, iconos adaptativos y sprites UI
 │   ├── splash.png                   # Pantalla de carga inicial
 │   ├── icon.png / adaptive-icon.png # Iconos de la aplicación móvil
-│   ├── logo_trabs_*.png             # Variantes de marca Trabs (circular, con nombre, con fondo y sin fondo)
+│   ├── logo_trabs_*.png             # Variantes de marca GryPhus Conect (circular, con nombre, con fondo y sin fondo)
 │   └── sprites/                     # Iconos temáticos de toast (listo_logo, error_logo, camara_logo)
 ├── src/
 │   ├── constants/
-│   │   └── theme.js                 # Design Tokens oficiales Trabs 2026 (Paleta de colores, tipografías y sombras)
+│   │   └── theme.js                 # Design Tokens oficiales GryPhus Conect 2026 (Paleta de colores, tipografías y sombras)
 │   ├── database/
 │   │   ├── db.js                    # Capa de abstracción SQLite (accuraop.db): inicialización de tablas, queries y colas unsynced
 │   │   └── sync.js                  # Pipeline de sincronización bidireccional (syncCatalog, syncAvances, syncAsistencias, syncReportes, auto-sync)
@@ -74,7 +74,7 @@ accuraop_terreno/
 
 ## 💾 3. Arquitectura Offline-First y Base de Datos Local (`db.js`)
 
-En las obras de construcción, la conectividad suele ser nula, intermitente o de baja calidad. Por ello, **Trabs Terreno** opera bajo un diseño **100% Offline-First**:
+En las obras de construcción, la conectividad suele ser nula, intermitente o de baja calidad. Por ello, **GryPhus Conect Terreno** opera bajo un diseño **100% Offline-First**:
 
 1. **Persistencia Local Inmediata**: Cualquier acción realizada por el supervisor (un avance en m², una bitácora o una asistencia) se escribe de manera inmediata y sincrónica en la base de datos **SQLite local (`accuraop.db`)** con la bandera `synced = 0`.
 2. **Esquema Relacional Homólogo**: Las tablas locales de SQLite replican exactamente los nombres de campos y tipos del PostgreSQL remoto en Supabase:
@@ -101,7 +101,7 @@ El pipeline de sincronización administra de forma transparente la bidireccional
 ```mermaid
 sequenceDiagram
     autonumber
-    participant App as Trabs Terreno UI
+    participant App as GryPhus Conect Terreno UI
     participant SQLite as SQLite (accuraop.db)
     participant Sync as sync.js Engine
     participant Net as NetInfo
@@ -165,7 +165,7 @@ graph TD
 * Al autenticarse, guarda la sesión y ejecuta automáticamente `syncCatalog` para dejar el smartphone 100% operativo sin necesidad de conexión posterior.
 
 ### 5.2 `HomeScreen.js` (Selector de Faenas)
-* Cabecera superior oscura en Antracita Oscuro (`#2D3033`) con avatar del supervisor y su nombre.
+* Cabecera superior oscura en Antracita Oscuro (`#262B29`) con avatar del supervisor y su nombre.
 * Indicador visual de estado de sincronización (Punto verde: Todo al día / Punto ámbar: Registros pendientes / Punto rojo: Sin conexión).
 * Lista de tarjetas de obra con borde cromático identificador, estado operativo (`Activa` / `Pausada`) y botón de acceso directo.
 * Botón de cierre de sesión seguro.

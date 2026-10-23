@@ -1,0 +1,320 @@
+/* style.qss - GryPhus Conect Gerencia (Manual de Identidad Gryphus — "Piedra y Bosque" + "Operativa Industrial") */
+/* 
+   Paleta Oficial GryPhus Conect (Gryphus Systems):
+   - #3D523C: Verde Musgo (Slate Forest) - Color insignia (10%), CTA primario, acento estructural
+   - #B85A3A: Tierra Cobre (Industrial) - Acento operativo de faena, alertas y métricas críticas
+   - #262B29: Basalto Oscuro (Dark Basalt) - Sidebar oscuro, cabeceras de tablas, alto contraste
+   - #2E3331: Basalto Medio - Superficie secundaria oscura, hover y selección en Sidebar
+   - #4A524E: Piedra Media (Medium Slate) - Líneas guía, bordes, subtítulos (30% estructura)
+   - #F2EFE9: Tiza / Papel Kraft (Chalk White) - Fondo general Zero-Fatigue (60% base neutra)
+   - #D8D5CD: Hormigón Ceniza - Fondo secundario, pestañas inactivas, separadores
+   - #FFFFFF: Blanco Puro - Contenedores de tarjetas, tablas e inputs
+   - #1F2421: Carbón Obra - Texto principal de alta legibilidad sobre fondos claros
+*/
+
+/* 1. REGLA DE FONDO PRINCIPAL GLOBAL (Zero-Fatigue Interface) */
+QMainWindow,
+QWidget,
+QStackedWidget,
+QScrollArea,
+QScrollArea > QWidget,
+QAbstractScrollArea,
+QWidget#MainCentralWidget,
+QWidget#LoginScreen,
+QWidget#MainView {
+    background-color: #F2EFE9;
+    color: #1F2421;
+    font-family: 'Inter', 'Work Sans', -apple-system, sans-serif;
+}
+
+/* Tipografía de etiquetas */
+QLabel {
+    color: #1F2421;
+    font-family: 'Inter', 'Work Sans', sans-serif;
+    font-size: 14px;
+}
+
+QLabel#TitleLabel {
+    font-family: 'Space Grotesk', 'Work Sans', 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #262B29;
+}
+
+QToolTip {
+    background-color: #262B29;
+    color: #F2EFE9;
+    border: 1px solid #4A524E;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+}
+
+/* 2. BARRA LATERAL (SIDEBAR): Fondo Basalto Oscuro (#262B29) */
+QFrame#Sidebar, 
+QFrame#Sidebar QWidget {
+    background-color: #262B29;
+}
+
+QFrame#Sidebar {
+    border-right: 1px solid #2E3331;
+}
+
+QFrame#Sidebar QLabel {
+    color: #F2EFE9 !important;
+    background-color: transparent;
+}
+
+QPushButton.SidebarButton {
+    background-color: transparent;
+    color: #D8D5CD !important;
+    text-align: left;
+    padding: 12px 16px;
+    border: none;
+    border-left: 4px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Space Grotesk', 'Work Sans', 'Inter', sans-serif;
+}
+
+QPushButton.SidebarButton:hover {
+    background-color: rgba(242, 239, 233, 0.10);
+    color: #FFFFFF !important;
+}
+
+QPushButton.SidebarButton:checked {
+    background-color: #2E3331;
+    color: #FFFFFF !important;
+    border-left: 4px solid #3D523C;
+    font-weight: 700;
+}
+
+QPushButton.SidebarButtonSync {
+    color: #E28568 !important;
+    border: 1px solid #B85A3A;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background: rgba(184, 90, 58, 0.12);
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+QPushButton.SidebarButtonSync:hover {
+    background-color: #B85A3A;
+    color: #FFFFFF !important;
+}
+
+QPushButton.SidebarButtonUpdate {
+    color: #A7C4A5 !important;
+    border: 1px solid #3D523C;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background-color: rgba(61, 82, 60, 0.25);
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+QPushButton.SidebarButtonUpdate:hover {
+    background-color: #3D523C;
+    border-color: #5C7A5A;
+    color: #FFFFFF !important;
+}
+
+QPushButton.SidebarButtonLogout {
+    color: #FCA5A5 !important;
+    border: 1px solid #B91C1C;
+    border-radius: 6px;
+    padding: 10px 16px;
+    background: transparent;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+QPushButton.SidebarButtonLogout:hover {
+    background-color: rgba(185, 28, 28, 0.25);
+    color: #FFFFFF !important;
+}
+
+/* 3. TARJETAS Y CONTENEDORES BLANCOS (#FFFFFF) */
+QWidget#LoginContainer,
+QFrame.Card,
+QWidget.Card,
+QGroupBox {
+    background-color: #FFFFFF;
+    color: #1F2421;
+    border: 1px solid #4A524E;
+    border-radius: 12px;
+}
+
+QLabel.CardTitle {
+    color: #262B29;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: transparent;
+}
+
+QLabel.CardValue {
+    color: #1F2421;
+    font-size: 26px;
+    font-weight: 800;
+    font-family: 'Space Grotesk', 'JetBrains Mono', sans-serif;
+    background-color: transparent;
+}
+
+/* 4. CAMPOS DE ENTRADA E INPUTS (#FFFFFF) */
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {
+    background-color: #FFFFFF;
+    border: 1px solid #4A524E;
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: #1F2421;
+    font-size: 14px;
+    selection-background-color: #3D523C;
+    selection-color: #F2EFE9;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
+    border: 2px solid #3D523C;
+    background-color: #FFFFFF;
+    color: #1F2421;
+}
+
+/* 5. BOTONES PRIMARIOS (#3D523C - Verde Musgo) */
+QPushButton#PrimaryButton {
+    background-color: #3D523C;
+    color: #F2EFE9 !important;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: #2F402E;
+    color: #FFFFFF !important;
+}
+
+QPushButton#PrimaryButton:pressed {
+    background-color: #233022;
+    color: #FFFFFF !important;
+}
+
+QPushButton#PrimaryButton:disabled {
+    background-color: #4A524E;
+    color: #D8D5CD !important;
+}
+
+/* BOTONES SECUNDARIOS */
+QPushButton#SecondaryButton {
+    background-color: #FFFFFF;
+    color: #262B29;
+    border: 1px solid #4A524E;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QPushButton#SecondaryButton:hover {
+    background-color: #D8D5CD;
+    color: #1F2421;
+}
+
+/* 6. TABLAS AMPLIAS Y ESPACIOSAS: Filas de 44px con amplio acolchado de celda */
+QTableWidget, QTableWidget viewport, QTableView, QHeaderView {
+    background-color: #FFFFFF;
+    color: #1F2421;
+}
+
+QTableWidget, QTableView {
+    border: 1px solid #4A524E;
+    border-radius: 8px;
+    gridline-color: #D8D5CD;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    alternate-background-color: #FAF8F5;
+    selection-background-color: #262B29;
+    selection-color: #F2EFE9;
+}
+
+QTableWidget::item, QTableView::item {
+    padding: 12px 14px;
+    min-height: 44px;
+    color: #1F2421;
+    border-bottom: 1px solid #E6E3DC;
+    background-color: #FFFFFF;
+}
+
+QTableWidget::item:selected, QTableView::item:selected {
+    background-color: #262B29;
+    color: #F2EFE9;
+}
+
+QHeaderView::section {
+    background-color: #262B29;
+    color: #F2EFE9;
+    padding: 14px 12px;
+    min-height: 40px;
+    border: none;
+    border-bottom: 2px solid #3D523C;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* 7. PESTAÑAS (TABS) */
+QTabWidget::pane {
+    border: 1px solid #4A524E;
+    background-color: #FFFFFF;
+    color: #1F2421;
+    border-radius: 6px;
+}
+
+QTabBar::tab {
+    background-color: #D8D5CD;
+    color: #4A524E;
+    padding: 10px 18px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: #FFFFFF;
+    color: #262B29;
+    border: 1px solid #4A524E;
+    border-bottom: 3px solid #3D523C;
+}
+
+/* 8. DIALOGOS Y MENUS */
+QDialog, QMessageBox {
+    background-color: #FFFFFF;
+    color: #1F2421;
+}
+
+QMessageBox QLabel, QDialog QLabel {
+    color: #1F2421;
+    font-size: 14px;
+    background-color: transparent;
+}
+
+QMessageBox QPushButton, QDialog QPushButton {
+    background-color: #3D523C;
+    color: #F2EFE9 !important;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 700;
+}

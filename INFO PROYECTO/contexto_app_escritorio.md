@@ -1,8 +1,8 @@
-# 🖥️ Contexto Técnico de la Aplicación de Escritorio: Trabs Gerencia (`accuraop_gerencia`)
+# 🖥️ Contexto Técnico de la Aplicación de Escritorio: GryPhus Conect Gerencia (`gryphus_conect_gerencia`)
 
-**Organización**: Accuratek  
+**Organización**: Gryphus Systems  
 **Fecha de Actualización**: Agosto 2026  
-**Módulo**: Suite de Escritorio Administrativa y Financiera (`accuraop_gerencia`)  
+**Módulo**: Suite de Escritorio Administrativa y Financiera (`gryphus_conect_gerencia`)  
 **Versión de Producción**: 1.0.5 (Canal Oficial de Actualizaciones: [GitHub Releases `pancholavinf/trabs-gerencia`](https://github.com/pancholavinf/trabs-gerencia/releases))  
 **Documento**: Guía Técnica Integral de Arquitectura, Concurrencia, Controladores, Módulos UI, Auto-Login y Pipeline de Auto-Actualizaciones
 
@@ -20,14 +20,14 @@
 * **Persistencia de Sesión (Auto-Login)**: **PyQt6.QtCore.QSettings** (Almacenamiento seguro del refresh token en el registro de Windows).
 * **Empaquetado y Distribución**:
   * **PyInstaller** (`gerencia.spec` & `build_exe.py`): Compilación optimizada en modo carpeta autocontenida (`onedir`) con exclusión de binarios innecesarios (`scipy`, `lxml`, DLLs de renderizado por software) para mantener el instalador ultra ligero (~55 MB).
-  * **Inno Setup** (`TrabsGerencia_Setup.iss`): Generador de instalador ejecutable único para Windows con compresión sólida `LZMA2 Ultra`, integración de iconos en escritorio, menú de inicio y soporte de actualización desatendida (`/SILENT /CLOSEAPPLICATIONS`).
+  * **Inno Setup** (`GryPhus ConectGerencia_Setup.iss`): Generador de instalador ejecutable único para Windows con compresión sólida `LZMA2 Ultra`, integración de iconos en escritorio, menú de inicio y soporte de actualización desatendida (`/SILENT /CLOSEAPPLICATIONS`).
 
 ---
 
 ## 📂 2. Estructura de Directorios Completa
 
 ```text
-accuraop_gerencia/
+gryphus_conect_gerencia/
 ├── main.py                          # Punto de entrada, inicialización de QApplication, verificación de sesión y arranque
 ├── requirements.txt                 # Especificación de dependencias fijadas
 ├── build_exe.py                     # Script de automatización de compilación con PyInstaller
@@ -36,25 +36,25 @@ accuraop_gerencia/
 ├── PUBLICAR_VERSION.bat             # Lanzador bat para publicar nuevas versiones a GitHub Releases
 ├── PUBLICAR_v1.0.5.bat              # Script bat directo de publicación rápida para v1.0.5
 ├── gerencia.spec                    # Archivo de configuración técnica de empaquetado PyInstaller
-├── TrabsGerencia_Setup.iss          # Script de compilación de instalador oficial para Inno Setup
+├── GryPhus ConectGerencia_Setup.iss          # Script de compilación de instalador oficial para Inno Setup
 ├── version.json                     # Manifiesto local de control de versiones
 ├── create-jefe-obra.js              # Script helper en Node.js para registro de supervisores en Supabase Auth
 ├── test_controller.py               # Suite de pruebas unitarias para controladores
 ├── assets/                          # Recursos gráficos institucionales, logotipos y animaciones
 │   ├── app_icon.ico                 # Icono oficial multirresolución (16px a 256px) con fondo blanco
-│   ├── logo_trabs_nombre_cf.png     # Logo Trabs con texto con fondo blanco
-│   ├── logo_trabs_nombre_sf.png     # Logo Trabs con texto sin fondo (Sidebar)
-│   ├── logo_trabs_circular_cf.png   # Logo circular Trabs con fondo blanco
-│   ├── logo_trabs_circular_sf.png   # Logo circular Trabs sin fondo
-│   ├── logo_trabs_solo_cf.png       # Isotipo Trabs con fondo blanco
-│   ├── logo_trabs_solo_sf.png       # Isotipo Trabs sin fondo
-│   ├── animacion_trabs.gif          # Animación institucional del Splash Screen
+│   ├── logo_gryphus_nombre_cf.png     # Logo GryPhus Conect con texto con fondo blanco
+│   ├── logo_gryphus_nombre_sf.png     # Logo GryPhus Conect con texto sin fondo (Sidebar)
+│   ├── logo_gryphus_circular_cf.png   # Logo circular GryPhus Conect con fondo blanco
+│   ├── logo_gryphus_circular_sf.png   # Logo circular GryPhus Conect sin fondo
+│   ├── logo_gryphus_solo_cf.png       # Isotipo GryPhus Conect con fondo blanco
+│   ├── logo_gryphus_solo_sf.png       # Isotipo GryPhus Conect sin fondo
+│   ├── animacion_gryphus.gif          # Animación institucional del Splash Screen
 │   └── *.png                        # Sprites e iconos temáticos de estados, reportes y bitácoras
 ├── dist_installer/                  # Binarios de distribución final compilados
-│   ├── TrabsGerencia_Setup_v1.0.2.exe # Instalador de producción v1.0.2
-│   ├── TrabsGerencia_Setup_v1.0.3.exe # Instalador de producción v1.0.3
-│   ├── TrabsGerencia_Setup_v1.0.4.exe # Instalador de producción v1.0.4
-│   └── TrabsGerencia_Setup_v1.0.5.exe # Instalador de producción v1.0.5
+│   ├── GryPhus ConectGerencia_Setup_v1.0.2.exe # Instalador de producción v1.0.2
+│   ├── GryPhus ConectGerencia_Setup_v1.0.3.exe # Instalador de producción v1.0.3
+│   ├── GryPhus ConectGerencia_Setup_v1.0.4.exe # Instalador de producción v1.0.4
+│   └── GryPhus ConectGerencia_Setup_v1.0.5.exe # Instalador de producción v1.0.5
 ├── documentos_edp/                  # Directorio local de respaldo para PDFs de Estados de Pago generados
 └── src/
     ├── version.py                   # Fuente centralizada de versión y endpoint de GitHub Releases
@@ -66,7 +66,7 @@ accuraop_gerencia/
     │   ├── updater.py               # Motor asíncrono de Auto-Updates (CheckUpdateWorker, DownloadUpdateWorker e instalador)
     │   └── workers.py               # Colección de 37 hilos asíncronos (QThread) para el patrón Zero-Freeze
     ├── ui/
-    │   ├── style.qss                # Hoja de estilos Qt oficial (Design System Trabs 2026 + Tooltips oscuros)
+    │   ├── style.qss                # Hoja de estilos Qt oficial (Design System GryPhus Conect 2026 + Tooltips oscuros)
     │   ├── login_screen.py          # Pantalla de login con precarga de correo y pie institucional
     │   ├── main_view.py             # Ventana principal: Sidebar Antracita + QStackedWidget + Tooltips + Botón Verde Oliva
     │   ├── dashboard_view.py        # Dashboard general: KPIs, widget Asistencia Hoy y cuadrícula de obras
@@ -117,13 +117,13 @@ La aplicación cuenta con **37 workers especializados**:
 
 ## 🔄 4. Sistema de Auto-Actualizaciones (Auto-Updates)
 
-El sistema de actualización continua permite que todos los computadores que ejecuten **Trabs Gerencia** se mantengan sincronizados con la última versión de forma transparente.
+El sistema de actualización continua permite que todos los computadores que ejecuten **GryPhus Conect Gerencia** se mantengan sincronizados con la última versión de forma transparente.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Usuario
-    participant App as Trabs Gerencia (Escritorio)
+    participant App as GryPhus Conect Gerencia (Escritorio)
     participant GitHub as GitHub Releases Cloud (pancholavinf/trabs-gerencia)
     participant Inno as Instalador Windows Inno Setup
 
@@ -134,7 +134,7 @@ sequenceDiagram
     Usuario->>App: Clic en "🚀 Actualizar Ahora"
     App->>GitHub: Streaming del instalador .exe hacia %TEMP%
     GitHub-->>App: Emite progreso en tiempo real (MB/s, %)
-    App->>Inno: Ejecuta: TrabsGerencia_Setup_v1.0.4.exe /SILENT /CLOSEAPPLICATIONS
+    App->>Inno: Ejecuta: GryPhus ConectGerencia_Setup_v1.0.4.exe /SILENT /CLOSEAPPLICATIONS
     App->>App: Cierra aplicación (sys.exit) y el instalador reemplaza binarios
 ```
 
@@ -153,7 +153,7 @@ sequenceDiagram
      ```powershell
      .\PUBLICAR_VERSION.bat --version 1.0.4 --notes "• Descripción de los cambios..."
      ```
-   * El script actualiza `src/version.py`, `TrabsGerencia_Setup.iss`, recompila PyInstaller, genera el instalador de Inno Setup, hace push a Git y crea el Release en GitHub con el archivo `.exe` adjunto vía API REST.
+   * El script actualiza `src/version.py`, `GryPhus ConectGerencia_Setup.iss`, recompila PyInstaller, genera el instalador de Inno Setup, hace push a Git y crea el Release en GitHub con el archivo `.exe` adjunto vía API REST.
 
 ---
 
@@ -163,7 +163,7 @@ La aplicación implementa un flujo de autenticación persistente respaldado por 
 
 1. **Al iniciar sesión por primera vez**:
    * `LoginWorker` autentica contra Supabase Auth con correo y contraseña.
-   * Si las credenciales son válidas y el rol no es `'jefe_obra'`, almacena el `refresh_token` y el correo en `QSettings("Accuratek", "TrabsGerencia")`.
+   * Si las credenciales son válidas y el rol no es `'jefe_obra'`, almacena el `refresh_token` y el correo en `QSettings("Gryphus Systems", "GryPhus ConectGerencia")`.
 2. **En los siguientes inicios (Bypass de Login)**:
    * Durante la reproducción del video/animación del Splash Screen (~5.8s), el hilo `SessionCheckWorker` consulta el `refresh_token` guardado e invoca `supabase.auth.refresh_session(saved_refresh_token)`.
    * Al terminar el Splash, la app se salta la pantalla de inicio de sesión por completo y entra directamente a la vista principal y al Dashboard.
@@ -175,11 +175,11 @@ La aplicación implementa un flujo de autenticación persistente respaldado por 
 ## 🖥️ 6. Módulos Funcionales de la Interfaz (`src/ui/`)
 
 ### 6.1 Barra Lateral y Navegación Principal (`main_view.py`)
-* **Diseño Institucional**: Fondo Antracita Oscuro (`#2D3033`) con borde divisorio Carbón Pizarra (`#414445`).
+* **Diseño Institucional**: Fondo Antracita Oscuro (`#262B29`) con borde divisorio Carbón Pizarra (`#414445`).
 * **Tooltips en Todos los Botones**: Cuadros de ayuda flotantes oscuros (`#1F2115`) con tipografía Inter que describen la función de cada módulo al posar el cursor.
 * **Botón de Sincronización**: Botón destacado `"⚡ Resincronizar Datos"` para forzar la actualización del caché TTL.
 * **Botón de Actualizaciones**: Botón verde oliva `"🔄 Buscar Actualizaciones"` (`SidebarButtonUpdate`) para comprobación manual instantánea.
-* **Badge de Estado**: Pie inferior con indicador `Trabs Gerencia v1.0.4 🟢 • Accuratek`.
+* **Badge de Estado**: Pie inferior con indicador `GryPhus Conect Gerencia v1.0.4 🟢 • Gryphus Systems`.
 
 ### 6.2 Dashboard General y Asistencia Hoy (`dashboard_view.py`)
 * **KPIs Consolidados**: Tarjetas con sombras vectoriales que resumen:
@@ -261,10 +261,10 @@ Para compilar la aplicación y generar los paquetes de distribución:
 ```powershell
 .\COMPILAR_APP.bat
 ```
-Genera la carpeta `accuraop_gerencia/dist/TrabsGerencia/` con el binario `TrabsGerencia.exe` (17.7 MB) autocontenido.
+Genera la carpeta `gryphus_conect_gerencia/dist/GryPhus ConectGerencia/` con el binario `GryPhus ConectGerencia.exe` (17.7 MB) autocontenido.
 
 ### 2. Generación del Instalador Oficial (Inno Setup)
-Compila `accuraop_gerencia/TrabsGerencia_Setup.iss` generando `dist_installer/TrabsGerencia_Setup_v1.0.5.exe` (~55 MB) con compresión sólida `LZMA2 Ultra`.
+Compila `gryphus_conect_gerencia/GryPhus ConectGerencia_Setup.iss` generando `dist_installer/GryPhus ConectGerencia_Setup_v1.0.5.exe` (~55 MB) con compresión sólida `LZMA2 Ultra`.
 
 ### 3. Publicación de Nuevas Versiones
 ```powershell
@@ -272,4 +272,4 @@ Compila `accuraop_gerencia/TrabsGerencia_Setup.iss` generando `dist_installer/Tr
 # o con parámetros personalizados:
 .\PUBLICAR_VERSION.bat --version 1.0.5 --notes "• Novedades de la versión..."
 ```
-O simplemente subiendo el archivo `dist_installer/TrabsGerencia_Setup_v1.0.5.exe` a la sección de **Releases** en GitHub.
+O simplemente subiendo el archivo `dist_installer/GryPhus ConectGerencia_Setup_v1.0.5.exe` a la sección de **Releases** en GitHub.

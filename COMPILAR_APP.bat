@@ -1,11 +1,11 @@
 @echo off
-title Compilando Trabs Gerencia (.EXE)
+title Compilando GryPhus Conect Gerencia (.EXE)
 echo ====================================================
-echo   Compilando Trabs Gerencia con PyInstaller...
+echo   Compilando GryPhus Conect Gerencia con PyInstaller...
 echo ====================================================
 cd /d "%~dp0"
 call .venv\Scripts\activate.bat
-cd accuraop_gerencia
+cd gryphus_conect_gerencia
 python build_exe.py
 echo.
 echo ====================================================

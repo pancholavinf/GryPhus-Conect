@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidad - GryPhus Conect Terreno | Gryphus Systems</title>
+  <style>
+    :root {
+      --primary: #3D523C;
+      --dark: #262B29;
+      --bg: #F2EFE9;
+      --text: #1F2115;
+      --card-bg: #FFFFFF;
+      --border: #E2E8F0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background-color: var(--bg);
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+    }
+    header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: var(--dark);
+      font-size: 26px;
+      margin: 0 0 10px 0;
+    }
+    .meta {
+      color: #64748B;
+      font-size: 14px;
+    }
+    h2 {
+      color: var(--dark);
+      font-size: 19px;
+      margin-top: 30px;
+      border-left: 4px solid var(--primary);
+      padding-left: 12px;
+    }
+    p, li {
+      font-size: 15px;
+      color: #334155;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    .highlight-box {
+      background-color: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0;
+      font-size: 14px;
+      color: #92400E;
+    }
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 13px;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Política de Privacidad de GryPhus Conect Terreno</h1>
+      <div class="meta">
+        <strong>Aplicación:</strong> GryPhus Conect Terreno (com.gryphus.conect.terreno)<br>
+        <strong>Desarrollador:</strong> Gryphus Systems<br>
+        <strong>Última actualización:</strong> Septiembre 2026
+      </div>
+    </header>
+
+    <div class="highlight-box">
+      <strong>Resumen de Compromiso:</strong> GryPhus Conect Terreno es una aplicación de uso estrictamente profesional y corporativo diseñada para el control y supervisión operativa en faenas de construcción. No recopilamos datos con fines publicitarios ni comercializamos información personal con terceros.
+    </div>
+
+    <h2>1. Información que Recopilamos</h2>
+    <p>Para el correcto funcionamiento operativo y la auditoría de faenas en obra, la aplicación recopila y procesa las siguientes categorías de datos:</p>
+    <ul>
+      <li><strong>Datos de Autenticación y Cuenta:</strong> Dirección de correo electrónico corporativo, nombre completo, cargo o rol en faena y teléfono de contacto proporcionados al supervisor por la administración de contrato.</li>
+      <li><strong>Fotografías y Archivos Multimedia (Cámara y Galería):</strong> Imágenes capturadas voluntariamente por el supervisor para documentar:
+        <ul>
+          <li>Evidencia fotográfica de avances físicos de obra por metro cuadrado ($m^2$).</li>
+          <li>Fotografía grupal de la cuadrilla durante el pase de lista diario de asistencia.</li>
+          <li>Fotografías de incidentes, condiciones inseguras o bitácora de obra.</li>
+        </ul>
+      </li>
+      <li><strong>Datos de Asistencia y Nómina:</strong> Registro del presentismo diario (jornada completa, medio día o ausencia) de los trabajadores asignados a la faena.</li>
+      <li><strong>Registros Técnicos y Metadatos:</strong> Fecha y hora de captura local en el dispositivo móvil, partidas presupuestarias ejecutadas y consumo diario de materiales.</li>
+    </ul>
+
+    <h2>2. Permisos del Dispositivo Móvil</h2>
+    <p>La aplicación solicita acceso a funciones específicas del dispositivo únicamente cuando es necesario:</p>
+    <ul>
+      <li><strong>Cámara (<code>android.permission.CAMERA</code>):</strong> Utilizada exclusivamente para la toma directa de fotografías de respaldo de avances físicos, bitácora y control de asistencia.</li>
+      <li><strong>Almacenamiento y Galería (<code>READ_MEDIA_IMAGES</code>):</strong> Utilizada para seleccionar fotografías previas de faena capturadas por el usuario.</li>
+      <li><strong>Acceso al Estado de Red:</strong> Utilizado para monitorear la disponibilidad de conexión a internet y coordinar la sincronización en segundo plano de los datos pendientes guardados localmente en la base de datos SQLite.</li>
+    </ul>
+
+    <h2>3. Finalidad del Tratamiento de Datos</h2>
+    <p>La información recopilada se utiliza exclusivamente para:</p>
+    <ul>
+      <li>Garantizar el funcionamiento fuera de línea (*Offline-First*) de la aplicación en zonas sin cobertura celular.</li>
+      <li>Auditar y respaldar la ejecución física de contratos de protección pasiva contra fuego y construcción.</li>
+      <li>Calcular la remuneración y asistencia del personal técnico de obra.</li>
+      <li>Emitir Estados de Pago (EDP) y documentación oficial respaldada con fotografías inmutables para cobro a clientes.</li>
+    </ul>
+
+    <h2>4. Seguridad y Almacenamiento</h2>
+    <p>Todos los datos se transmiten hacia nuestros servidores a través de canales seguros cifrados mediante el protocolo <strong>HTTPS / TLS 1.3</strong>. Los datos se almacenan en infraestructura segura en la nube (PostgreSQL y Supabase Storage) con políticas estrictas de seguridad a nivel de fila (Row-Level Security - RLS).</p>
+
+    <h2>5. Compartición de Datos con Terceros</h2>
+    <p><strong>Gryphus Systems no vende, no alquila y no comparte información personal o de obra con ninguna red publicitaria o entidad externa de marketing.</strong> La información solo es accesible por el personal autorizado de la gerencia de obra y administración de contrato de Gryphus Systems.</p>
+
+    <h2>6. Retención y Eliminación de Datos</h2>
+    <p>Los datos se conservan durante la vigencia del contrato de obra y según los plazos legales requeridos para la auditoría de construcción. Cualquier usuario o colaborador puede solicitar la rectificación o eliminación de sus datos personales contactando directamente a nuestro equipo de soporte.</p>
+
+    <h2>7. Contacto</h2>
+    <p>Para consultas, aclaraciones o ejercicio de derechos sobre esta política de privacidad, puede contactarnos a través de:</p>
+    <ul>
+      <li><strong>Empresa:</strong> Gryphus Systems</li>
+      <li><strong>Correo Electrónico:</strong> contacto@accuratek.cl</li>
+      <li><strong>Sitio Web:</strong> <a href="https://accuratek.cl" target="_blank">https://accuratek.cl</a></li>
+    </ul>
+
+    <footer>
+      &copy; 2026 Gryphus Systems. Todos los derechos reservados.<br>
+      GryPhus Conect Terreno — Control Operativo de Protección Pasiva y Obra
+    </footer>
+  </div>
+</body>
+</html>

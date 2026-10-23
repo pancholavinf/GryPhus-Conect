@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "GryPhus Conect Terreno",
+    "slug": "gryphus-conect-terreno",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gryphus.conect.terreno"
+    },
+    "android": {
+      "package": "com.gryphus.conect.terreno",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#262B29"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "backgroundColor": "#F2EFE9"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-sqlite",
+        {
+          "useSQLiteCAPI": true
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c763fb0b-74f6-445b-8361-164c3e551a0b"
+      }
+    }
+  }
+}

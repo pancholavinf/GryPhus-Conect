@@ -1,21 +1,21 @@
-# 🏗️ Reporte de Arquitectura y Estado Actual: Ecosistema Trabs
+# 🏗️ Reporte de Arquitectura y Estado Actual: Ecosistema GryPhus Conect
 
-**Organización**: Accuratek  
+**Organización**: Gryphus Systems  
 **Fecha de Actualización**: Agosto 2026  
 **Estado del Proyecto**: Operativo en Producción E2E / Ingesta, Control de Personal, Asistencia, Avances, Bitácoras, Emisión Inmutable de EDP, Persistencia de Sesión y Auto-Actualizaciones Continuas (v1.0.5)  
-**Autor**: Antigravity Coding Assistant & Accuratek Engineering Team  
+**Autor**: Antigravity Coding Assistant & Gryphus Systems Engineering Team  
 **Documento**: Arquitectura Técnica Integral, Conectividad, Ecosistema Multiplataforma y Modelo de Datos
 
 ---
 
 ## 1. Resumen Ejecutivo del Sistema
 
-El ecosistema **Trabs** (desarrollado por **Accuratek**) es una plataforma tecnológica integral multiplataforma diseñada para digitalizar, controlar y auditar en tiempo real la ejecución técnica, el capital humano y el cierre financiero de faenas de construcción especializada (protección pasiva de estructuras metálicas contra fuego mediante pinturas intumescentes, morteros ignífugos, aislaciones térmico-acústicas y sellos de pasadas).
+El ecosistema **GryPhus Conect** (desarrollado por **Gryphus Systems**) es una plataforma tecnológica integral multiplataforma diseñada para digitalizar, controlar y auditar en tiempo real la ejecución técnica, el capital humano y el cierre financiero de faenas de construcción especializada (protección pasiva de estructuras metálicas contra fuego mediante pinturas intumescentes, morteros ignífugos, aislaciones térmico-acústicas y sellos de pasadas).
 
 El sistema opera sobre un backend en la nube basado en **Supabase** (PostgreSQL 15+, Auth y S3-compatible Storage) junto a un canal de distribución continua en **GitHub Releases**, articulándose en dos aplicaciones nativas con responsabilidades desacopladas:
 
-1. **Trabs Gerencia (`accuraop_gerencia`)**: Aplicación de escritorio desarrollada en **Python 3.10+** y **PyQt6**. Diseñada para la alta dirección, administradores de contrato y gerencia operativa. Centraliza la ingesta masiva de cubicaciones desde planillas Excel, la administración de supervisores/jefes de obra con creación aislada en Auth y asignación matricial a faenas (`jefes_view.py`), la administración del catálogo maestro de materiales y personal (cargos, tarifas y maestros con tarjetas de perfil compactas y avatar antialiased), el monitoreo analítico en tiempo real con dashboards gráficos interactivos de **Matplotlib**, el módulo de **Ítems de Obra** con buscador instantáneo, filtros de estado y ficha técnica sincronizada por partida con histórico de avances, la auditoría visual de evidencias y la emisión inmutable de **Estados de Pago (EDP)** con compilación de PDF oficial mediante **ReportLab**. Cuenta con sistema de **Auto-Login persistente** (`QSettings`), motor de **Auto-Actualizaciones integradas** con GitHub Releases y empaquetado autónomo ejecutable para Windows (**Inno Setup v1.0.5**).
-2. **Trabs Terreno (`accuraop_terreno`)**: Aplicación móvil desarrollada en **React Native** con **Expo SDK 54**. Diseñada para los Jefes de Obra y supervisores en el frente de faena. Opera bajo una arquitectura estricta **Offline-First** apoyada en una base de datos local **SQLite (`accuraop.db`)** y una caché reactiva en memoria (`memoryCache.js`). Permite registrar avances físicos por $m^2$ de forma individual o mediante **lotes multi-ítem con una sola foto de respaldo** (con subida deduplicada a Supabase Storage), tomar la asistencia diaria del personal asignado (con foto de grupo y soporte correctivo), redactar la bitácora diaria de incidentes/novedades y registrar el consumo diario de insumos. Cuenta con un pipeline de sincronización bidireccional en segundo plano (`sync.js`) y suite de pruebas automatizadas en 7 niveles.
+1. **GryPhus Conect Gerencia (`gryphus_conect_gerencia`)**: Aplicación de escritorio desarrollada en **Python 3.10+** y **PyQt6**. Diseñada para la alta dirección, administradores de contrato y gerencia operativa. Centraliza la ingesta masiva de cubicaciones desde planillas Excel, la administración de supervisores/jefes de obra con creación aislada en Auth y asignación matricial a faenas (`jefes_view.py`), la administración del catálogo maestro de materiales y personal (cargos, tarifas y maestros con tarjetas de perfil compactas y avatar antialiased), el monitoreo analítico en tiempo real con dashboards gráficos interactivos de **Matplotlib**, el módulo de **Ítems de Obra** con buscador instantáneo, filtros de estado y ficha técnica sincronizada por partida con histórico de avances, la auditoría visual de evidencias y la emisión inmutable de **Estados de Pago (EDP)** con compilación de PDF oficial mediante **ReportLab**. Cuenta con sistema de **Auto-Login persistente** (`QSettings`), motor de **Auto-Actualizaciones integradas** con GitHub Releases y empaquetado autónomo ejecutable para Windows (**Inno Setup v1.0.5**).
+2. **GryPhus Conect Terreno (`gryphus_conect_terreno`)**: Aplicación móvil desarrollada en **React Native** con **Expo SDK 54**. Diseñada para los Jefes de Obra y supervisores en el frente de faena. Opera bajo una arquitectura estricta **Offline-First** apoyada en una base de datos local **SQLite (`accuraop.db`)** y una caché reactiva en memoria (`memoryCache.js`). Permite registrar avances físicos por $m^2$ de forma individual o mediante **lotes multi-ítem con una sola foto de respaldo** (con subida deduplicada a Supabase Storage), tomar la asistencia diaria del personal asignado (con foto de grupo y soporte correctivo), redactar la bitácora diaria de incidentes/novedades y registrar el consumo diario de insumos. Cuenta con un pipeline de sincronización bidireccional en segundo plano (`sync.js`) y suite de pruebas automatizadas en 7 niveles.
 
 ```mermaid
 graph TB
@@ -28,10 +28,10 @@ graph TB
 
     subgraph Releases["Distribución Continua (GitHub Releases Cloud)"]
         GH_API["GitHub Releases API (releases/latest)"]
-        GH_BIN["Instaladores Windows (TrabsGerencia_Setup_v*.exe)"]
+        GH_BIN["Instaladores Windows (GryPhus ConectGerencia_Setup_v*.exe)"]
     end
 
-    subgraph Desktop["Trabs Gerencia (Escritorio - PyQt6 / Python 3.10+)"]
+    subgraph Desktop["GryPhus Conect Gerencia (Escritorio - PyQt6 / Python 3.10+)"]
         MAIN["MainView (QStackedWidget + Tooltips)"]
         DASH["Dashboard & Asistencia Hoy"]
         INGEST["Ingesta Excel & Diálogo Precios"]
@@ -45,7 +45,7 @@ graph TB
         UPDATER["Auto-Updater (Streaming Download & Silent Restart)"]
     end
 
-    subgraph Mobile["Trabs Terreno (Móvil - Expo SDK 54 / React Native)"]
+    subgraph Mobile["GryPhus Conect Terreno (Móvil - Expo SDK 54 / React Native)"]
         M_AUTH["LoginScreen (Auth Session)"]
         M_HOME["HomeScreen (Selector de Obra)"]
         M_MENU["ObraMenu (4 Vías de Operación)"]
@@ -82,8 +82,8 @@ La configuración de endpoints y credenciales se gestiona de forma aislada media
 * **Supabase Auth**: Autenticación basada en correo y contraseña. Los tokens de acceso (JWT) y de refresco permiten mantener sesiones válidas.
 * **Sincronización Automática de Perfiles (`on_auth_user_created`)**: Un disparador en PostgreSQL intercepta cualquier alta en `auth.users` y actualiza/inserta inmediatamente el registro correspondiente en `public.perfiles_usuario` (nombre, rol, email, teléfono, foto y rut).
 * **Control de Roles por Aplicación**:
-  * Rol `'administrador'`: Acceso total a la aplicación de escritorio (`accuraop_gerencia`) y permisos administrativos en la base de datos.
-  * Rol `'jefe_obra'`: Acceso restringido exclusivamente a la aplicación móvil (`accuraop_terreno`). Si un usuario con rol `'jefe_obra'` intenta iniciar sesión en el escritorio, los hilos `LoginWorker` y `SessionCheckWorker` rechazan el acceso y cierran la sesión automáticamente.
+  * Rol `'administrador'`: Acceso total a la aplicación de escritorio (`gryphus_conect_gerencia`) y permisos administrativos en la base de datos.
+  * Rol `'jefe_obra'`: Acceso restringido exclusivamente a la aplicación móvil (`gryphus_conect_terreno`). Si un usuario con rol `'jefe_obra'` intenta iniciar sesión en el escritorio, los hilos `LoginWorker` y `SessionCheckWorker` rechazan el acceso y cierran la sesión automáticamente.
 * **Persistencia en Escritorio**: El `refresh_token` se almacena localmente en `QSettings` de Windows para restaurar la sesión automáticamente en el arranque sin pedir credenciales reiteradas.
 
 ### 2.3 Políticas de Seguridad a Nivel de Fila (RLS)
@@ -106,7 +106,7 @@ El sistema utiliza el bucket público principal **`accuratek-data`** en Supabase
 
 ---
 
-## 3. Arquitectura de Trabs Gerencia (`accuraop_gerencia`)
+## 3. Arquitectura de GryPhus Conect Gerencia (`gryphus_conect_gerencia`)
 
 ### 3.1 Patrón de Concurrencia Zero-Freeze (`core/workers.py` y `core/updater.py`)
 Para garantizar una experiencia de usuario fluida e instantánea, toda interacción con la red, cálculos matemáticos pesados o compilación de documentos se delega a hilos `QThread`:
@@ -121,7 +121,7 @@ Para garantizar una experiencia de usuario fluida e instantánea, toda interacci
 
 ---
 
-## 4. Arquitectura de Trabs Terreno (`accuraop_terreno`)
+## 4. Arquitectura de GryPhus Conect Terreno (`gryphus_conect_terreno`)
 
 ### 4.1 Principio Offline-First
 La aplicación móvil opera de forma 100% independiente de la conectividad celular:
@@ -140,9 +140,9 @@ La aplicación móvil opera de forma 100% independiente de la conectividad celul
 sequenceDiagram
     autonumber
     actor Admin as Gerencia / Administrador
-    participant Desktop as Trabs Gerencia
+    participant Desktop as GryPhus Conect Gerencia
     participant Cloud as Supabase PostgreSQL / Storage
-    participant Mobile as Trabs Terreno
+    participant Mobile as GryPhus Conect Terreno
 
     Admin->>Desktop: Carga planilla Excel de cubicación técnica (.xlsx)
     Desktop->>Desktop: Valida columnas obligatorias y jerarquías (Pisos/Ejes/Partidas)
@@ -158,9 +158,9 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor Jefe as Jefe de Obra (Terreno)
-    participant Mobile as Trabs Terreno
+    participant Mobile as GryPhus Conect Terreno
     participant Cloud as Supabase
-    participant Desktop as Trabs Gerencia
+    participant Desktop as GryPhus Conect Gerencia
     actor Admin as Gerencia
 
     Jefe->>Mobile: Registra avance físico (m2) + Foto de evidencia
